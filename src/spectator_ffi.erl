@@ -12,10 +12,7 @@ get_status(Name, Timeout) ->
 
 get_state(Name, Timeout) ->
     try
-        case sys:get_state(Name, Timeout) of
-            {ok, State} -> {ok, State};
-            State -> {ok, State}
-        end
+        {ok, sys:get_state(Name, Timeout)}
     catch
         _:Reason -> {error, Reason}
     end.
@@ -65,7 +62,6 @@ get_info(Name) ->
                     element(4, InfoTuple),
                     element(5, InfoTuple),
                     element(6, InfoTuple),
-                    % Search in process dictionary for tag
                     case element(7, InfoTuple) of
                         undefined -> none;
                         Value -> {some, Value}
