@@ -61,11 +61,10 @@ pub fn get_state_test() {
     pantry.list_items(sub)
     |> dynamic.from()
 
-  let inspected_state_res = api.get_state(pid, 500)
-  let inspected_state = should.be_ok(inspected_state_res)
+  let inspected_state =
+    api.get_state(pid, 500)
+    |> should.be_ok()
 
-  let _ = io.debug(inspected_state_res)
-  io.debug(#(inspected_state, actual_state))
   should.equal(inspected_state, actual_state)
 }
 

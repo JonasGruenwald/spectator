@@ -12,8 +12,7 @@ get_status(Name, Timeout) ->
 
 get_state(Name, Timeout) ->
     try
-        State = sys:get_state(Name, Timeout),
-        {ok, State}
+        {ok, sys:get_state(Name, Timeout)}
     catch
         _:Reason -> {error, Reason}
     end.
