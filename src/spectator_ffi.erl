@@ -41,12 +41,15 @@ get_info(Name) ->
         {dictionary, spectator_debug_tag}
     ],
     try
-        case erlang:process_info(Name, ItemList) of
+        P = erlang:process_info(Name, ItemList),
+        % erlang:display(P),
+        case P of
             undefined ->
                 {error, not_found};
             [] ->
                 {error, no_info};
             Info ->
+                % erlang:display(Info),
                 {_Keys, Values} = lists:unzip(Info),
                 InfoTuple = list_to_tuple(Values),
                 InfoNormalized = {
@@ -57,14 +60,15 @@ get_info(Name) ->
                     % Convert registered name to option type
                     case element(3, InfoTuple) of
                         [] -> none;
-                        Name -> {some, Name}
+                        RegisteredName -> {some, RegisteredName}
                     end,
                     element(4, InfoTuple),
                     element(5, InfoTuple),
                     element(6, InfoTuple),
+                    % Convert tag to option type
                     case element(7, InfoTuple) of
                         undefined -> none;
-                        Value -> {some, Value}
+                        SpectatorDebugTag -> {some, SpectatorDebugTag}
                     end
                 },
                 {ok, InfoNormalized}

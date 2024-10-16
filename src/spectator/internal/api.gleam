@@ -1,7 +1,10 @@
+import gleam/io
 import gleam/dynamic
 import gleam/erlang/atom
 import gleam/erlang/process
+import gleam/list
 import gleam/option
+import gleam/result
 
 pub type SysState {
   Running
@@ -34,6 +37,10 @@ pub type Arity {
   Arity(Int)
 }
 
+pub type ProcessItem {
+  ProcessItem(pid: process.Pid, info: Info)
+}
+
 pub type Info {
   Info(
     /// tuple of module, function, and arity.
@@ -50,6 +57,18 @@ pub type Info {
 
 pub fn add_tag(tag: String) {
   put_into_process_dictionary(SpectatorDebugTag, tag)
+}
+
+pub fn get_info_list() -> Result(List(ProcessItem), dynamic.Dynamic) {
+  list_processes()
+  |> list.map(fn(pid) {
+
+    case get_info(pid) {
+      Error(e) -> Error(e) |> io.debug()
+      Ok(info) -> Ok(ProcessItem(pid, info)) |> io.debug()
+    }
+  })
+  |> result.all
 }
 
 @external(erlang, "erlang", "put")
