@@ -8,6 +8,10 @@ pub type SysState {
   Suspended
 }
 
+pub type SpectatorDebugTag {
+  SpectatorDebugTag
+}
+
 pub type Status {
   Status(
     pid: process.Pid,
@@ -42,6 +46,13 @@ pub type Info {
     reductions: Int,
   )
 }
+
+pub fn add_tag(tag: String) {
+  put_into_process_dictionary(SpectatorDebugTag, tag)
+}
+
+@external(erlang, "erlang", "put")
+fn put_into_process_dictionary(a: a, b: b) -> Nil
 
 @external(erlang, "erlang", "processes")
 pub fn list_processes() -> List(process.Pid)
