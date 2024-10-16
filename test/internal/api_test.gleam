@@ -1,8 +1,9 @@
-import gleam/option
+import gleam/io
 import gleam/dynamic
 import gleam/erlang/atom
 import gleam/erlang/process
 import gleam/list
+import gleam/option
 import gleeunit/should
 import spectator/internal/api
 import utils/pantry
@@ -55,6 +56,7 @@ pub fn get_state_test() {
   let pid = process.subject_owner(sub)
 
   pantry.add_item(sub, "This actor has some state")
+
   let actual_state =
     pantry.list_items(sub)
     |> dynamic.from
@@ -62,6 +64,8 @@ pub fn get_state_test() {
   let inspected_state =
     api.get_state(pid, 500)
     |> should.be_ok
+
+    io.debug(#(actual_state, inspected_state))
 
   should.equal(actual_state, inspected_state)
 }
@@ -99,12 +103,12 @@ pub fn get_info_test() {
   info.registered_name
   |> should.equal(option.None)
 
-  {info.memory > 0}
+  { info.memory > 0 }
   |> should.be_true
 
-  {info.message_queue_len >= 0}
+  { info.message_queue_len >= 0 }
   |> should.be_true
 
-  {info.reductions >= 0}
+  { info.reductions >= 0 }
   |> should.be_true
 }
