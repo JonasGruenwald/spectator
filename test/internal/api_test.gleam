@@ -1,7 +1,7 @@
-import gleam/io
 import gleam/dynamic
 import gleam/erlang/atom
 import gleam/erlang/process
+import gleam/io
 import gleam/list
 import gleam/option
 import gleeunit/should
@@ -59,15 +59,14 @@ pub fn get_state_test() {
 
   let actual_state =
     pantry.list_items(sub)
-    |> dynamic.from
+    |> dynamic.from()
 
-  let inspected_state =
-    api.get_state(pid, 500)
-    |> should.be_ok
+  let inspected_state_res = api.get_state(pid, 500)
+  let inspected_state = should.be_ok(inspected_state_res)
 
-    io.debug(#(actual_state, inspected_state))
-
-  should.equal(actual_state, inspected_state)
+  let _ = io.debug(inspected_state_res)
+  io.debug(#(inspected_state, actual_state))
+  should.equal(inspected_state, actual_state)
 }
 
 pub fn get_state_failure_test() {
