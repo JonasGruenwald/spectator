@@ -40,29 +40,41 @@ get_info(Name) ->
         registered_name,
         memory,
         message_queue_len,
-        reductions
+        reductions,
+        {dictionary, spectator_debug_tag}
     ],
-    case erlang:process_info(Name, ItemList) of
-        undefined ->
-            {error, not_found};
-        [] ->
-            {error, no_info};
-        Info ->
-            {_Keys, Values} = lists:unzip(Info),
-            InfoTuple = list_to_tuple(Values),
-            InfoNormalized = {
-                info,
-                element(1, InfoTuple),
-                element(2, InfoTuple),
-                case element(3, InfoTuple) of
-                    [] -> none;
-                    Name -> {some, Name}
-                end,
-                element(4, InfoTuple),
-                element(5, InfoTuple),
-                element(6, InfoTuple)
-            },
-            {ok, InfoNormalized}
+    try
+        case erlang:process_info(Name, ItemList) of
+            undefined ->
+                {error, not_found};
+            [] ->
+                {error, no_info};
+            Info ->
+                {_Keys, Values} = lists:unzip(Info),
+                InfoTuple = list_to_tuple(Values),
+                InfoNormalized = {
+                    % Prefix to turn into Info() type
+                    info,
+                    element(1, InfoTuple),
+                    element(2, InfoTuple),
+                    % Convert registered name to option type
+                    case element(3, InfoTuple) of
+                        [] -> none;
+                        Name -> {some, Name}
+                    end,
+                    element(4, InfoTuple),
+                    element(5, InfoTuple),
+                    element(6, InfoTuple),
+                    % Search in process dictionary for tag
+                    case element(7, InfoTuple) of
+                        undefined -> none;
+                        Value -> {some, Value}
+                    end
+                },
+                {ok, InfoNormalized}
+        end
+    catch
+        _:Reason -> {error, Reason}
     end.
 
 get_all_info(Name) ->

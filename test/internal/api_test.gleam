@@ -109,4 +109,17 @@ pub fn get_info_test() {
 
   { info.reductions >= 0 }
   |> should.be_true
+
+  info.tag
+  |> should.be_none
+}
+
+pub fn tag_test() {
+  api.add_tag("test_tag")
+  let info =
+    api.get_info(process.self())
+    |> should.be_ok
+
+  info.tag
+  |> should.equal(option.Some("test_tag"))
 }

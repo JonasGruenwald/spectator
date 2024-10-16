@@ -44,6 +44,7 @@ pub type Info {
     memory: Int,
     message_queue_len: Int,
     reductions: Int,
+    tag: option.Option(String),
   )
 }
 
