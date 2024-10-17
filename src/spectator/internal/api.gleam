@@ -1,9 +1,11 @@
 import gleam/dynamic
 import gleam/erlang/atom
 import gleam/erlang/process
+import gleam/int
 import gleam/io
 import gleam/list
 import gleam/option
+import gleam/order
 import gleam/result
 
 pub type SysState {
@@ -41,6 +43,20 @@ pub type ProcessItem {
   ProcessItem(pid: process.Pid, info: Info)
 }
 
+pub type InfoSortCriteria {
+  Name
+  Tag
+  CurrentFunction
+  Memory
+  Reductions
+  MessageQueue
+}
+
+pub type SortDirection {
+  Ascending
+  Descending
+}
+
 pub type Info {
   Info(
     /// tuple of module, function, and arity.
@@ -63,24 +79,56 @@ pub fn get_info_list() -> Result(List(ProcessItem), dynamic.Dynamic) {
   list_processes()
   |> list.map(fn(pid) {
     case get_info(pid) {
-      Error(e) -> Error(e) |> io.debug()
-      Ok(info) -> Ok(ProcessItem(pid, info)) |> io.debug()
+      Error(e) -> Error(e) 
+      Ok(info) -> Ok(ProcessItem(pid, info)) 
     }
   })
   |> result.all
 }
 
-@external(erlang, "erlang", "put")
-fn put_into_process_dictionary(a: a, b: b) -> Nil
+fn apply_direction(order: order.Order, direction: SortDirection) -> order.Order {
+  case direction {
+    Ascending -> order
+    Descending -> order.negate(order)
+  }
+}
 
-@external(erlang, "erlang", "processes")
-pub fn list_processes() -> List(process.Pid)
+pub fn sort_info_list(
+  input: List(ProcessItem),
+  criteria: InfoSortCriteria,
+  direction: SortDirection,
+) -> List(ProcessItem) {
+  case criteria {
+    Memory -> {
+      list.sort(input, fn(a, b) {
+        int.compare(a.info.memory, b.info.memory) |> apply_direction(direction)
+      })
+    }
+    Reductions -> {
+      list.sort(input, fn(a, b) {
+        int.compare(a.info.reductions, b.info.reductions) |> apply_direction( direction)
+      })
+    }
+    MessageQueue -> {
+      list.sort(input, fn(a, b) {
+        int.compare(a.info.message_queue_len, b.info.message_queue_len) |> apply_direction( direction)
+      })
+    }
+    _ -> todo
+  }
+}
+
+@external(erlang, "erlang", "put")
+pub fn put_into_process_dictionary(a: a, b: b) -> Nil
 
 @external(erlang, "spectator_ffi", "get_status")
 pub fn get_status(
   pid: process.Pid,
   timeout: Int,
 ) -> Result(Status, dynamic.Dynamic)
+
+@external(erlang, "erlang", "processes")
+pub fn list_processes() -> List(process.Pid)
 
 @external(erlang, "spectator_ffi", "get_info")
 pub fn get_info(pid: process.Pid) -> Result(Info, dynamic.Dynamic)

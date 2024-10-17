@@ -42,14 +42,12 @@ get_info(Name) ->
     ],
     try
         P = erlang:process_info(Name, ItemList),
-        % erlang:display(P),
         case P of
             undefined ->
                 {error, not_found};
             [] ->
                 {error, no_info};
             Info ->
-                % erlang:display(Info),
                 {_Keys, Values} = lists:unzip(Info),
                 InfoTuple = list_to_tuple(Values),
                 InfoNormalized = {

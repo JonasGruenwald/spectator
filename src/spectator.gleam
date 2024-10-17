@@ -40,13 +40,14 @@ pub fn tag(name: String) -> Nil {
 fn show_process_list() -> Response(ResponseData) {
   let res = response.new(200)
   let assert Ok(info) = api.get_info_list()
+  let sorted = api.sort_info_list(info, api.Memory, api.Descending)
   let assert Ok(priv) = erlang.priv_directory("spectator")
   let assert Ok(styles) = simplifile.read(priv <> "/styles.css")
 
   let html =
     html([], [
       html.head([], [html.title([], "Process List"), html.style([], styles)]),
-      html.body([], [process_table.render(info)]),
+      html.body([], [process_table.render(sorted)]),
     ])
   response.set_body(
     res,

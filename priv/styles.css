@@ -2,3 +2,49 @@
   font-family: Arial, sans-serif;
   font-size: 14px;
 }
+
+:root{
+  --text: #000000;
+  --background: #fffbe8;
+  --highlight: #a6f0fc;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  color: var(--text);
+  background: var(--background);
+}
+
+table {
+  width: 100%;
+  height: 100%;
+  border-collapse: collapse;
+}
+
+thead {
+  position: sticky;
+  top: 0;
+  left: 0;
+  background: white;
+  user-select: none;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 2.5px;
+}
+
+tr:hover > td{
+  background: var(--highlight)
+}
+
+th:nth-of-type(4),
+td:nth-of-type(4),
+th:nth-of-type(5),
+td:nth-of-type(5),
+th:nth-of-type(6),
+td:nth-of-type(6) {
+  text-align: right;
+}

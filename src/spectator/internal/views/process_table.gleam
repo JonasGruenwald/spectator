@@ -24,7 +24,8 @@ pub fn render(processes: List(api.ProcessItem)) {
   html.table([], [
     html.thead([], [
       html.tr([], [
-        html.th([attribute.title("Process PID or registered name")], [
+        html.th([
+          attribute.title("Process PID or registered name")], [
           html.text("Name"),
         ]),
         html.th([attribute.title("Spectator tag or initial call")], [
