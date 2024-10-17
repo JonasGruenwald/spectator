@@ -3,9 +3,9 @@
   font-size: 14px;
 }
 
-:root{
+:root {
   --text: #000000;
-  --background: #fffbe8;
+  --background: #ffffff;
   --highlight: #a6f0fc;
 }
 
@@ -19,7 +19,7 @@ body {
 table {
   width: 100%;
   height: 100%;
-  border-collapse: collapse;
+  border-spacing: 0;
 }
 
 thead {
@@ -30,13 +30,31 @@ thead {
   user-select: none;
 }
 
+.topbar {
+  padding: 5px 2.5px;
+  font-size: 28px;
+  display: flex;
+  font-weight: 100;
+  align-items: center;
+  border-bottom: 1px solid black;
+}
+
+thead th {
+  border-bottom: 1px solid black;
+}
+
+th:first-child {
+  border-left: 0;
+}
+
 th,
 td {
   text-align: left;
   padding: 2.5px;
+  border: 0;
 }
 
-tr:hover > td{
+tr:hover>td {
   background: var(--highlight)
 }
 
@@ -47,4 +65,8 @@ td:nth-of-type(5),
 th:nth-of-type(6),
 td:nth-of-type(6) {
   text-align: right;
+}
+
+.lucy-icon {
+  width: 3em;
 }

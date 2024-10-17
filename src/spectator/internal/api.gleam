@@ -2,7 +2,6 @@ import gleam/dynamic
 import gleam/erlang/atom
 import gleam/erlang/process
 import gleam/int
-import gleam/io
 import gleam/list
 import gleam/option
 import gleam/order
