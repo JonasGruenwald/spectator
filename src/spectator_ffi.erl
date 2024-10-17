@@ -1,5 +1,5 @@
 -module(spectator_ffi).
--export([get_status/2, get_state/2, get_info/1, get_all_info/1]).
+-export([get_status/2, get_state/2, get_info/1, get_all_info/1, format_pid/1]).
 
 get_status(Name, Timeout) ->
     try
@@ -83,3 +83,6 @@ get_all_info(Name) ->
         [] -> {error, no_info};
         Info -> {ok, Info}
     end.
+
+format_pid(Pid) ->
+    list_to_bitstring(pid_to_list(Pid)).

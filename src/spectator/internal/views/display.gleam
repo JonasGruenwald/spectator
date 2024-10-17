@@ -1,11 +1,11 @@
 import gleam/erlang/atom
 import gleam/erlang/process
 import gleam/int
-import gleam/string
 import lustre/element/html
+import spectator/internal/api
 
 pub fn pid(pid: process.Pid) {
-  html.text(string.inspect(pid))
+  html.text(api.format_pid(pid))
 }
 
 pub fn function(ref: #(atom.Atom, atom.Atom, Int)) {

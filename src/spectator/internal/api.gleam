@@ -1,7 +1,7 @@
-import gleam/io
 import gleam/dynamic
 import gleam/erlang/atom
 import gleam/erlang/process
+import gleam/io
 import gleam/list
 import gleam/option
 import gleam/result
@@ -62,7 +62,6 @@ pub fn add_tag(tag: String) {
 pub fn get_info_list() -> Result(List(ProcessItem), dynamic.Dynamic) {
   list_processes()
   |> list.map(fn(pid) {
-
     case get_info(pid) {
       Error(e) -> Error(e) |> io.debug()
       Ok(info) -> Ok(ProcessItem(pid, info)) |> io.debug()
@@ -102,3 +101,6 @@ pub fn suspend(pid: process.Pid) -> Nil
 
 @external(erlang, "sys", "resume")
 pub fn resume(pid: process.Pid) -> Nil
+
+@external(erlang, "spectator_ffi", "format_pid")
+pub fn format_pid(pid: process.Pid) -> String
