@@ -1,6 +1,6 @@
-import spectator
 import gleam/erlang/process
 import gleam/io
+import spectator
 import utils/pantry
 
 pub fn main() {
