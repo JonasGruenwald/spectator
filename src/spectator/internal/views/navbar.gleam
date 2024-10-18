@@ -117,6 +117,27 @@ fn icon() {
   )
 }
 
+fn tab(title: String, active: Bool) {
+  let classes = case active {
+    True -> "tab active"
+    False -> "tab"
+  }
+  html.div([attribute.class(classes)], [html.text(title)])
+}
+
 pub fn render() {
-  html.nav([attribute.class("topbar")], [icon(), html.text("Spectator")])
+  html.nav([attribute.class("topbar")], [
+    html.div([attribute.class("logo")], [icon(), html.text("Spectator")]),
+    html.div([attribute.class("filler")], []),
+    html.div([attribute.class("tabs")], [
+      tab("Processes", True),
+      html.div([attribute.class("separator")], []),
+      tab("ETS", False),
+      html.div([attribute.class("separator")], []),
+      tab("Ports", False),
+      html.div([attribute.class("separator")], []),
+      tab("Stats", False),
+    ]),
+    html.div([attribute.class("filler")], []),
+  ])
 }

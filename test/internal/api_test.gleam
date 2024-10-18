@@ -113,6 +113,18 @@ pub fn get_info_test() {
   |> should.be_none
 }
 
+pub fn get_details_test() {
+  let details =
+    api.get_details(process.self())
+    |> should.be_ok
+
+  details.trap_exit
+  |> should.be_false
+
+  details.status
+  |> should.equal(atom.create_from_string("running"))
+}
+
 pub fn tag_test() {
   api.add_tag("test_tag")
   let info =

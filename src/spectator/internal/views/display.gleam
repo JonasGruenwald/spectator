@@ -1,11 +1,37 @@
 import gleam/erlang/atom
+import gleam/erlang/port
 import gleam/erlang/process
 import gleam/int
 import lustre/element/html
 import spectator/internal/api
 
 pub fn pid(pid: process.Pid) {
-  html.text("PID"<>api.format_pid(pid))
+  html.text("PID" <> api.format_pid(pid))
+}
+
+pub fn port(port: port.Port) {
+  html.text(api.format_port(port))
+}
+
+pub fn atom(a: atom.Atom) {
+  html.text(atom.to_string(a))
+}
+
+pub fn bool(b: Bool) {
+  case b {
+    True -> html.text("true")
+    False -> html.text("false")
+  }
+}
+
+pub fn system_primitive(primitive: api.SystemPrimitive) {
+  case primitive {
+    api.Process(p) -> pid(p)
+    api.RegisteredProcess(name) -> atom(name)
+    api.Port(p) -> port(p)
+    api.RegisteredPort(name) -> atom(name)
+    api.NifResource(_) -> html.text("NIF Resource")
+  }
 }
 
 pub fn function(ref: #(atom.Atom, atom.Atom, Int)) {
