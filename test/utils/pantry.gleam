@@ -2,10 +2,10 @@
 //// 
 //// 
 
-import spectator
 import gleam/erlang/process.{type Subject}
 import gleam/otp/actor
 import gleam/set.{type Set}
+import spectator
 
 // Below this comment are the public functions that we want to expose to other modules.
 // Some things to note:
