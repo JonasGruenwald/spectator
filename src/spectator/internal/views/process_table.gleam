@@ -20,7 +20,7 @@ fn render_name(process: api.ProcessItem) {
 fn render_tag(process: api.ProcessItem) {
   case process.info.tag {
     option.None -> display.function(process.info.initial_call)
-    option.Some(tag) -> html.text(tag)
+    option.Some(tag) -> html.text("🔖 "<> tag)
   }
 }
 
