@@ -17,6 +17,27 @@ pub fn atom(a: atom.Atom) {
   html.text(atom.to_string(a))
 }
 
+pub fn storage(size: Int) {
+  case size {
+    _s if size < 1024 -> html.text(int.to_string(size) <> " B")
+    _s if size < 1_048_576 -> html.text(int.to_string(size / 1024) <> " KiB")
+    _s -> html.text(int.to_string(size / 1024 / 1024) <> " MiB")
+  }
+}
+
+pub fn storage_detailed(size) {
+  let byte_size = int.to_string(size) <> " Bytes"
+  case size {
+    _s if size < 1024 -> html.text(byte_size)
+    _s if size < 1_048_576 ->
+      html.text(byte_size <> " (" <> int.to_string(size / 1024) <> " KiB)")
+    _s ->
+      html.text(
+        byte_size <> " (" <> int.to_string(size / 1024 / 1024) <> " MiB)",
+      )
+  }
+}
+
 pub fn bool(b: Bool) {
   case b {
     True -> html.text("true")

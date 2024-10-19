@@ -113,7 +113,7 @@ fn render_details(
             ]),
             html.dl([], [
               html.dt([], [html.text("Memory")]),
-              html.dd([], [display.number(proc.info.memory)]),
+              html.dd([], [display.storage_detailed(proc.info.memory)]),
             ]),
             html.dl([], [
               html.dt([], [html.text("Message Queue Length")]),
@@ -303,7 +303,7 @@ pub fn render(
             html.td([], [render_tag(process)]),
             html.td([], [display.function(process.info.current_function)]),
             html.td([], [display.number(process.info.reductions)]),
-            html.td([], [display.number(process.info.memory)]),
+            html.td([], [display.storage(process.info.memory)]),
             html.td([], [display.number(process.info.message_queue_len)]),
             html.td([], [display.atom(process.info.status)]),
           ],
