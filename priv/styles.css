@@ -61,6 +61,7 @@ dt {
 button {
   background: var(--background);
   border: 1px solid var(--text);
+  color: var(--text);
 }
 
 button:hover{
@@ -114,6 +115,12 @@ button:hover{
   border-top-left-radius: 10px;
   user-select: none;
   cursor: pointer;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.tab.disabled{
+  cursor: not-allowed;
 }
 
 .tab.active {

@@ -116,12 +116,20 @@ fn icon() {
   )
 }
 
-fn tab(title: String, current: String) {
+fn tab(title: String, current: String, path: String) {
   let classes = case title == current {
     True -> "tab active"
     False -> "tab"
   }
-  html.div([attribute.class(classes)], [html.text(title)])
+
+  case path {
+    "" ->
+      html.div([attribute.class(classes <> " disabled")], [html.text(title)])
+    _ ->
+      html.a([attribute.class(classes), attribute.href(path)], [
+        html.text(title),
+      ])
+  }
 }
 
 pub fn render(current_tab: String) {
@@ -129,13 +137,13 @@ pub fn render(current_tab: String) {
     html.div([attribute.class("logo")], [icon(), html.text("Spectator")]),
     html.div([attribute.class("filler")], []),
     html.div([attribute.class("tabs")], [
-      tab("Processes", current_tab),
+      tab("Processes", current_tab, "/processes"),
       html.div([attribute.class("separator")], []),
-      tab("ETS", current_tab),
+      tab("ETS", current_tab, ""),
       html.div([attribute.class("separator")], []),
-      tab("Ports", current_tab),
+      tab("Ports", current_tab, ""),
       html.div([attribute.class("separator")], []),
-      tab("Stats", current_tab),
+      tab("Stats", current_tab, ""),
     ]),
     html.div([attribute.class("filler")], []),
   ])

@@ -4,6 +4,8 @@
 
 Spectator is a BEAM observer tool written in Gleam, that plays well with gleam_otp processes.
 
+![](/priv/screenshot.png)
+
 ## Installation
 
 ```sh

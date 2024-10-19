@@ -51,6 +51,20 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
             |> response.set_body(mist.Bytes(bytes_builder.new()))
           })
         }
+        ["favicon.svg"] -> {
+          let assert Ok(priv) = erlang.priv_directory("spectator")
+          let path = priv <> "/lucy_spectator.svg"
+          mist.send_file(path, offset: 0, limit: option.None)
+          |> result.map(fn(favicon) {
+            response.new(200)
+            |> response.prepend_header("content-type", "image/svg+xml")
+            |> response.set_body(favicon)
+          })
+          |> result.lazy_unwrap(fn() {
+            response.new(404)
+            |> response.set_body(mist.Bytes(bytes_builder.new()))
+          })
+        }
 
         _ -> not_found
       }
@@ -145,6 +159,11 @@ fn render_server_component(title: String, server_component_path path: String) {
           ],
           "",
         ),
+        html.link([
+          attribute.rel("icon"),
+          attribute.href("/favicon.svg"),
+          attribute.type_("image/svg+xml"),
+        ]),
         html.style([], styles),
       ]),
       html.body([], [
