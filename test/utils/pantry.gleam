@@ -2,6 +2,7 @@
 //// 
 //// 
 
+import spectator
 import gleam/erlang/process.{type Subject}
 import gleam/otp/actor
 import gleam/set.{type Set}

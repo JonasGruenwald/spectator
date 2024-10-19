@@ -96,10 +96,6 @@ pub type Info {
   )
 }
 
-pub fn add_tag(tag: String) {
-  put_into_process_dictionary(SpectatorDebugTag, tag)
-}
-
 pub fn get_info_list() -> List(ProcessItem) {
   list_processes()
   |> list.filter_map(fn(pid) {
@@ -219,9 +215,6 @@ pub fn sort_info_list(
   }
 }
 
-@external(erlang, "erlang", "put")
-pub fn put_into_process_dictionary(a: a, b: b) -> Nil
-
 @external(erlang, "spectator_ffi", "get_status")
 pub fn get_status(
   pid: process.Pid,
@@ -259,3 +252,12 @@ pub fn format_pid(pid: process.Pid) -> String
 
 @external(erlang, "spectator_ffi", "format_port")
 pub fn format_port(port: port.Port) -> String
+
+@external(erlang, "spectator_tag_manager", "start_link")
+pub fn start_tag_manager() -> Nil
+
+@external(erlang, "spectator_tag_manager", "add_tag")
+pub fn add_tag(pid: process.Pid, tag: String) -> Nil
+
+@external(erlang, "spectator_tag_manager", "get_tag")
+pub fn get_tag(pid: process.Pid) -> Option(String)

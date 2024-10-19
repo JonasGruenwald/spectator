@@ -22,8 +22,11 @@ import spectator/internal/components/processes_live.{type ProcessesLive}
 import spectator/internal/utils
 import spectator/internal/views/navbar
 
-/// Start the spectator application.
-pub fn main() {
+/// Start the spectator application and block
+pub fn start() {
+  // TODO should run through a supervisor
+
+  // Start mist server
   let empty_body = mist.Bytes(bytes_builder.new())
   let not_found = response.set_body(response.new(404), empty_body)
   let assert Ok(_) =
@@ -60,14 +63,40 @@ pub fn main() {
     |> mist.port(3000)
     |> mist.start_http
 
+  // Start the tag manager
+  api.start_tag_manager()
+}
+
+pub fn main() {
+  start()
   process.sleep_forever()
 }
 
-/// Tag the current process with a name that can be used to identify it in the spectator UI.
-/// You must call this function from **within** the process you want to tag.
-/// A good place to call it, would be in the `init` function of your process.
-pub fn tag(name: String) -> Nil {
-  api.add_tag(name)
+/// Tag a process with a name for easier identification in the spectator UI.
+/// You must call `start` before calling this function.
+pub fn tag(pid: process.Pid, name: String) -> process.Pid {
+  api.add_tag(pid, name)
+  pid
+}
+
+/// Tag a process with a name for easier identification in the spectator UI.
+/// You must call `start` before calling this function.
+pub fn tag_subject(sub: process.Subject(a), name: String) -> process.Subject(a) {
+  let pid = process.subject_owner(sub)
+  tag(pid, name)
+  sub
+}
+
+/// Tag a process with a name for easier identification in the spectator UI.
+/// You must call `start` before calling this function.
+pub fn tag_result(
+  result: Result(process.Subject(a), b),
+  name: String,
+) -> Result(process.Subject(a), b) {
+  case result {
+    Ok(sub) -> Ok(tag_subject(sub, name))
+    other -> other
+  }
 }
 
 fn show_process_page() {

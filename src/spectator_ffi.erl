@@ -40,8 +40,7 @@ get_info(Name) ->
         registered_name,
         memory,
         message_queue_len,
-        reductions,
-        {dictionary, spectator_debug_tag}
+        reductions
     ],
     try
         P = erlang:process_info(Name, ItemList),
@@ -66,11 +65,7 @@ get_info(Name) ->
                     element(4, InfoTuple),
                     element(5, InfoTuple),
                     element(6, InfoTuple),
-                    % Convert tag to option type
-                    case element(7, InfoTuple) of
-                        undefined -> none;
-                        SpectatorDebugTag -> {some, SpectatorDebugTag}
-                    end
+                    spectator_tag_manager:get_tag(Name)
                 },
                 {ok, InfoNormalized}
         end
@@ -160,3 +155,5 @@ format_pid(Pid) ->
 
 format_port(Port) ->
     list_to_bitstring(port_to_list(Port)).
+
+

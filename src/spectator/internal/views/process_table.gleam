@@ -134,9 +134,13 @@ fn render_details(
 }
 
 fn classify_selected(process: api.ProcessItem, active: Option(api.ProcessItem)) {
-  case active {
-    Some(active) if active.pid == process.pid -> attribute.class("selected")
-    _ -> attribute.none()
+  let selection_status = case active {
+    Some(active) if active.pid == process.pid -> "selected"
+    _ -> ""
+  }
+  case process.info.tag {
+    option.None -> attribute.class(selection_status)
+    option.Some(_) -> attribute.class(selection_status <> " tagged")
   }
 }
 

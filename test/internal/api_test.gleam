@@ -126,11 +126,21 @@ pub fn get_details_test() {
 }
 
 pub fn tag_test() {
-  api.add_tag("test_tag")
-  let info =
-    api.get_info(process.self())
-    |> should.be_ok
+  //  Should be able to add tag
+  let assert Ok(sub) = pantry.new()
+  let pid = process.subject_owner(sub)
 
-  info.tag
-  |> should.equal(option.Some("test_tag"))
+  api.start_tag_manager()
+  api.add_tag(pid, "test tag")
+
+  api.get_tag(pid)
+  |> should.be_some
+  |> should.equal("test tag")
+
+  // Tag should be removed when process is killed
+  pantry.close(sub)
+  process.sleep(10)
+
+  api.get_tag(pid)
+  |> should.be_none
 }
