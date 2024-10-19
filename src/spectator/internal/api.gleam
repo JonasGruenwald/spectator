@@ -62,7 +62,6 @@ pub type ProcessDetails {
     links: List(SystemPrimitive),
     monitored_by: List(SystemPrimitive),
     monitors: List(SystemPrimitive),
-    status: atom.Atom,
     trap_exit: Bool,
     parent: Option(process.Pid),
   )
@@ -75,6 +74,7 @@ pub type InfoSortCriteria {
   Memory
   Reductions
   MessageQueue
+  ProcessStatus
 }
 
 pub type SortDirection {
@@ -93,6 +93,7 @@ pub type Info {
     message_queue_len: Int,
     reductions: Int,
     tag: option.Option(String),
+    status: atom.Atom,
   )
 }
 
@@ -212,6 +213,15 @@ pub fn sort_info_list(
         compare_tag(a, b) |> apply_direction(direction)
       })
     }
+    ProcessStatus -> {
+      list.sort(input, fn(a, b) {
+        string.compare(
+          atom.to_string(a.info.status),
+          atom.to_string(b.info.status),
+        )
+        |> apply_direction(direction)
+      })
+    }
   }
 }
 
@@ -254,7 +264,7 @@ pub fn format_pid(pid: process.Pid) -> String
 pub fn format_port(port: port.Port) -> String
 
 @external(erlang, "spectator_tag_manager", "start_link")
-pub fn start_tag_manager() -> Nil
+pub fn start_tag_manager() -> Result(process.Pid, dynamic.Dynamic)
 
 @external(erlang, "spectator_tag_manager", "add_tag")
 pub fn add_tag(pid: process.Pid, tag: String) -> Nil

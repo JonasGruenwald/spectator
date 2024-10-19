@@ -120,9 +120,6 @@ pub fn get_details_test() {
 
   details.trap_exit
   |> should.be_false
-
-  details.status
-  |> should.equal(atom.create_from_string("running"))
 }
 
 pub fn tag_test() {
@@ -131,6 +128,7 @@ pub fn tag_test() {
   let pid = process.subject_owner(sub)
 
   api.start_tag_manager()
+  |> should.be_ok
   api.add_tag(pid, "test tag")
 
   api.get_tag(pid)

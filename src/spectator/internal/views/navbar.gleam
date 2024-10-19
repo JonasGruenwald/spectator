@@ -1,7 +1,6 @@
 import lustre/attribute.{attribute}
 import lustre/element/html
 import lustre/element/svg
-import spectator/internal/utils
 
 fn icon() {
   svg.svg(

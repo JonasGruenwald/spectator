@@ -171,6 +171,15 @@ td {
   text-align: left;
   padding: 2.5px;
   border: 0;
+  max-width: 20vw;
+  height: 1.6em;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+tbody td:first-of-type,
+thead th:first-of-type {
+  padding-left: 5px;
 }
 
 tfoot th,
@@ -191,6 +200,10 @@ tbody tr.tagged {
   color: var(--text-hightlight);
 }
 
+.spectator-tagged {
+  opacity: 0.5;
+}
+
 tbody tr.tagged.selected {
   background: var(--text-hightlight);
   color: var(--background);
@@ -200,6 +213,8 @@ tbody tr.tagged.selected {
 .details {
   display: flex;
   flex-direction: row;
+  width: 100vw;
+  overflow: hidden;
 }
 
 .details>div {
@@ -208,7 +223,6 @@ tbody tr.tagged.selected {
   flex-basis: 50%;
   flex-grow: 0;
   flex-shrink: 0;
-  padding: 10px;
   overscroll-behavior: none;
 }
 
@@ -218,4 +232,22 @@ tbody tr.tagged.selected {
 
 .otp-placeholder {
   padding: 2px;
+}
+
+.panel-heading {
+  padding: 5px;
+  border-bottom: 1px solid var(--text);
+  position: sticky;
+  top: 0;
+  left: 0;
+  background: var(--background);
+  box-sizing: content-box;
+  height: 1.2em;
+  display: flex;
+  align-items: center;
+}
+
+.panel-content {
+  padding: 5px;
+  overflow: auto;
 }

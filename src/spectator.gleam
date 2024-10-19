@@ -3,9 +3,11 @@ import gleam/erlang
 import gleam/erlang/process
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
+import gleam/io
 import gleam/json
 import gleam/option
 import gleam/otp/actor
+import gleam/otp/static_supervisor as sup
 import gleam/result
 import lustre
 import lustre/attribute
@@ -22,14 +24,12 @@ import spectator/internal/components/processes_live.{type ProcessesLive}
 import spectator/internal/utils
 import spectator/internal/views/navbar
 
-/// Start the spectator application and block
-pub fn start() {
-  // TODO should run through a supervisor
 
+fn start_server() -> Result(process.Pid, Nil) {
   // Start mist server
   let empty_body = mist.Bytes(bytes_builder.new())
   let not_found = response.set_body(response.new(404), empty_body)
-  let assert Ok(_) =
+  let server_result =
     fn(req: Request(Connection)) -> Response(ResponseData) {
       case request.path_segments(req) {
         ["process-feed"] ->
@@ -63,31 +63,47 @@ pub fn start() {
     |> mist.port(3000)
     |> mist.start_http
 
-  // Start the tag manager
-  api.start_tag_manager()
+  // Extract PID for supervisor
+  case server_result {
+    Ok(server) -> {
+      let server_pid = process.subject_owner(server)
+      tag(server_pid, "__spectator_internal Server")
+      Ok(server_pid)
+    }
+    Error(e) -> {
+      io.debug(#("Failed to start spectator mist server ", e))
+      Error(Nil)
+    }
+  }
 }
 
-pub fn main() {
-  start()
-  process.sleep_forever()
+/// Start the spectator application
+pub fn start() {
+  sup.new(sup.OneForOne)
+  |> sup.add(sup.worker_child("Spectator Tag Manager", api.start_tag_manager))
+  |> sup.add(sup.worker_child("Spectator Mist Server", start_server))
+  |> sup.start_link()
 }
 
-/// Tag a process with a name for easier identification in the spectator UI.
+/// Tag a process given by PID with a name for easier identification in the spectator UI.
 /// You must call `start` before calling this function.
 pub fn tag(pid: process.Pid, name: String) -> process.Pid {
   api.add_tag(pid, name)
   pid
 }
 
-/// Tag a process with a name for easier identification in the spectator UI.
+/// Tag a process given by subject with a name for easier identification in the spectator UI.
 /// You must call `start` before calling this function.
-pub fn tag_subject(sub: process.Subject(a), name: String) -> process.Subject(a) {
+pub fn tag_subject(
+  subject sub: process.Subject(a),
+  name name: String,
+) -> process.Subject(a) {
   let pid = process.subject_owner(sub)
   tag(pid, name)
   sub
 }
 
-/// Tag a process with a name for easier identification in the spectator UI.
+/// Tag a process given by subject result with a name for easier identification in the spectator UI.
 /// You must call `start` before calling this function.
 pub fn tag_result(
   result: Result(process.Subject(a), b),
@@ -148,6 +164,8 @@ fn socket_init(
   let self = process.new_subject()
   let app = processes_live.app()
   let assert Ok(live_component) = lustre.start_actor(app, 0)
+
+  tag_subject(live_component, "__spectator_internal Component")
 
   process.send(
     live_component,

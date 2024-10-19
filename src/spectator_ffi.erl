@@ -40,7 +40,8 @@ get_info(Name) ->
         registered_name,
         memory,
         message_queue_len,
-        reductions
+        reductions,
+        status
     ],
     try
         P = erlang:process_info(Name, ItemList),
@@ -65,7 +66,8 @@ get_info(Name) ->
                     element(4, InfoTuple),
                     element(5, InfoTuple),
                     element(6, InfoTuple),
-                    spectator_tag_manager:get_tag(Name)
+                    spectator_tag_manager:get_tag(Name),
+                    element(7, InfoTuple)
                 },
                 {ok, InfoNormalized}
         end
@@ -87,7 +89,6 @@ get_details(Name) ->
         links,
         monitored_by,
         monitors,
-        status,
         trap_exit,
         parent
     ],
@@ -129,8 +130,7 @@ get_details(Name) ->
                         element(4, DetailsTuple)
                     ),
                     element(5, DetailsTuple),
-                    element(6, DetailsTuple),
-                    case element(7, DetailsTuple) of
+                    case element(6, DetailsTuple) of
                         undefined -> none;
                         Parent -> {some, Parent}
                     end

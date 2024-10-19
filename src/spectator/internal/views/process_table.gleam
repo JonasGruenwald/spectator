@@ -20,7 +20,8 @@ fn render_name(process: api.ProcessItem) {
 fn render_tag(process: api.ProcessItem) {
   case process.info.tag {
     option.None -> display.function(process.info.initial_call)
-    option.Some(tag) -> html.text("🔖 "<> tag)
+    option.Some("__spectator_internal " <> rest) -> html.text("🔍 " <> rest)
+    option.Some(tag) -> html.text("🔖 " <> tag)
   }
 }
 
@@ -39,90 +40,102 @@ fn render_details(
     Some(proc), Some(details) ->
       html.div([attribute.class("details")], [
         html.div([attribute.class("general")], [
-          html.dl([], [
-            html.dt([], [html.text("Process Id")]),
-            html.dd([], [display.pid(proc.pid)]),
+          html.div([attribute.class("panel-heading")], [
+            case proc.info.tag {
+              Some("__spectator_internal " <> rest) ->
+                html.text("🔍 Spectator " <> rest)
+              Some(tag) -> html.text("🔖 " <> tag <> " details")
+              None -> html.text("🎛️ Process Details")
+            },
           ]),
-          case proc.info.tag {
-            option.None -> html.text("")
-            option.Some(tag) ->
-              html.dl([], [
-                html.dt([], [html.text("Tag")]),
-                html.dd([], [html.text(tag)]),
-              ])
-          },
-          case proc.info.registered_name {
-            option.None -> html.text("")
-            option.Some(name) ->
-              html.dl([], [
-                html.dt([], [html.text("Registered Name")]),
-                html.dd([], [html.text(atom.to_string(name))]),
-              ])
-          },
-          html.dl([], [
-            html.dt([], [html.text("Status")]),
-            html.dd([], [html.text(atom.to_string(details.status))]),
-          ]),
-          html.dl([], [
-            html.dt([], [html.text("Links")]),
-            html.dd([], render_primitive_list(details.links)),
-          ]),
-          html.dl([], [
-            html.dt([], [html.text("Monitored By")]),
-            html.dd([], render_primitive_list(details.monitored_by)),
-          ]),
-          html.dl([], [
-            html.dt([], [html.text("Monitors")]),
-            html.dd([], render_primitive_list(details.monitors)),
-          ]),
-          html.dl([], [
-            html.dt([], [html.text("Parent")]),
-            html.dd([], [
-              case details.parent {
-                option.None -> html.text("None")
-                option.Some(pid) -> display.pid(pid)
-              },
+          html.div([attribute.class("panel-content")], [
+            html.dl([], [
+              html.dt([], [html.text("Process Id")]),
+              html.dd([], [display.pid(proc.pid)]),
             ]),
-          ]),
-          html.dl([], [
-            html.dt([], [html.text("Trap Exit")]),
-            html.dd([], [display.bool(details.trap_exit)]),
-          ]),
-          html.dl([], [
-            html.dt([], [html.text("Initial Call")]),
-            html.dd([], [display.function(proc.info.initial_call)]),
-          ]),
-          html.dl([], [
-            html.dt([], [html.text("Current Function")]),
-            html.dd([], [display.function(proc.info.current_function)]),
-          ]),
-          html.dl([], [
-            html.dt([], [html.text("Reductions")]),
-            html.dd([], [display.number(proc.info.reductions)]),
-          ]),
-          html.dl([], [
-            html.dt([], [html.text("Memory")]),
-            html.dd([], [display.number(proc.info.memory)]),
-          ]),
-          html.dl([], [
-            html.dt([], [html.text("Message Queue Length")]),
-            html.dd([], [display.number(proc.info.message_queue_len)]),
+            case proc.info.tag {
+              option.None -> html.text("")
+              option.Some(tag) ->
+                html.dl([], [
+                  html.dt([], [html.text("Tag")]),
+                  html.dd([], [html.text(tag)]),
+                ])
+            },
+            case proc.info.registered_name {
+              option.None -> html.text("")
+              option.Some(name) ->
+                html.dl([], [
+                  html.dt([], [html.text("Registered Name")]),
+                  html.dd([], [html.text(atom.to_string(name))]),
+                ])
+            },
+            html.dl([], [
+              html.dt([], [html.text("Status")]),
+              html.dd([], [html.text(atom.to_string(proc.info.status))]),
+            ]),
+            html.dl([], [
+              html.dt([], [html.text("Links")]),
+              html.dd([], render_primitive_list(details.links)),
+            ]),
+            html.dl([], [
+              html.dt([], [html.text("Monitored By")]),
+              html.dd([], render_primitive_list(details.monitored_by)),
+            ]),
+            html.dl([], [
+              html.dt([], [html.text("Monitors")]),
+              html.dd([], render_primitive_list(details.monitors)),
+            ]),
+            html.dl([], [
+              html.dt([], [html.text("Parent")]),
+              html.dd([], [
+                case details.parent {
+                  option.None -> html.text("None")
+                  option.Some(pid) -> display.pid(pid)
+                },
+              ]),
+            ]),
+            html.dl([], [
+              html.dt([], [html.text("Trap Exit")]),
+              html.dd([], [display.bool(details.trap_exit)]),
+            ]),
+            html.dl([], [
+              html.dt([], [html.text("Initial Call")]),
+              html.dd([], [display.function(proc.info.initial_call)]),
+            ]),
+            html.dl([], [
+              html.dt([], [html.text("Current Function")]),
+              html.dd([], [display.function(proc.info.current_function)]),
+            ]),
+            html.dl([], [
+              html.dt([], [html.text("Reductions")]),
+              html.dd([], [display.number(proc.info.reductions)]),
+            ]),
+            html.dl([], [
+              html.dt([], [html.text("Memory")]),
+              html.dd([], [display.number(proc.info.memory)]),
+            ]),
+            html.dl([], [
+              html.dt([], [html.text("Message Queue Length")]),
+              html.dd([], [display.number(proc.info.message_queue_len)]),
+            ]),
           ]),
         ]),
         html.div([attribute.class("otp")], case status, state {
           Some(status), Some(state) -> {
             [
-              html.div([], [
-                html.strong([], [html.text("OTP Process: ")]),
+              html.div([attribute.class("panel-heading")], [
+                html.strong([], [html.text("☎️ OTP Process: ")]),
                 display.atom(status.module),
               ]),
-              html.div([attribute.class("state-container")], [
+              html.div([attribute.class("panel-content")], [
                 html.pre([], [html.text(pprint.format(state))]),
               ]),
             ]
           }
           _, _ -> [
-            html.text("This process does not appear to be OTP-compliant"),
+            html.div([attribute.class("panel-content")], [
+              html.text("This process does not appear to be OTP-compliant"),
+            ]),
           ]
         }),
       ])
@@ -140,6 +153,8 @@ fn classify_selected(process: api.ProcessItem, active: Option(api.ProcessItem)) 
   }
   case process.info.tag {
     option.None -> attribute.class(selection_status)
+    option.Some("__spectator_internal " <> _rest) ->
+      attribute.class(selection_status <> " spectator-tagged")
     option.Some(_) -> attribute.class(selection_status <> " tagged")
   }
 }
@@ -229,9 +244,17 @@ pub fn render(
           handle_heading_click,
         ),
         heading(
-          "Memory",
+          "Messages",
           "Message queue size",
           api.MessageQueue,
+          sort_criteria,
+          sort_direction,
+          handle_heading_click,
+        ),
+        heading(
+          "Status",
+          "Process Status",
+          api.ProcessStatus,
           sort_criteria,
           sort_direction,
           handle_heading_click,
@@ -254,13 +277,14 @@ pub fn render(
             html.td([], [display.number(process.info.reductions)]),
             html.td([], [display.number(process.info.memory)]),
             html.td([], [display.number(process.info.message_queue_len)]),
+            html.td([], [display.atom(process.info.status)]),
           ],
         )
       }),
     ),
     html.tfoot([], [
       html.tr([], [
-        html.td([attribute.attribute("colspan", "6")], [
+        html.td([attribute.attribute("colspan", "7")], [
           render_details(active, details, status, state),
         ]),
       ]),
