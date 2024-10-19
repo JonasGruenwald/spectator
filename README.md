@@ -1,10 +1,10 @@
-## <img width=32 src="https://raw.githubusercontent.com/JonasGruenwald/spectator/main/priv/lucy_spectator.svg"> Spectator
+## <img width=16 src="https://raw.githubusercontent.com/JonasGruenwald/spectator/main/priv/lucy_spectator.svg"> Spectator
 [![Package Version](https://img.shields.io/hexpm/v/spectator)](https://hex.pm/packages/spectator)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/spectator/)
 
 Spectator is a BEAM observer tool written in Gleam, that plays well with gleam_otp processes.
 
-![](/priv/screenshot.png)
+![](https://raw.githubusercontent.com/JonasGruenwald/spectator/refs/heads/main/priv/screenshot.png)
 
 ## Installation
 
