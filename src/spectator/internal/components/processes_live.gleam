@@ -137,8 +137,14 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
     Refresh -> {
       let new_model = do_refresh(model)
       case new_model.active_process {
-        Some(p) -> #(new_model, request_otp_details(p.pid, model.subject))
-        None -> #(new_model, effect.none())
+        Some(p) -> #(
+          new_model,
+          effect.batch([
+            request_otp_details(p.pid, model.subject),
+            emit_after(interval, Refresh, option.None),
+          ]),
+        )
+        None -> #(new_model, emit_after(interval, Refresh, option.None))
       }
     }
     CreatedSubject(subject) -> #(
