@@ -24,7 +24,6 @@ import spectator/internal/components/processes_live.{type ProcessesLive}
 import spectator/internal/utils
 import spectator/internal/views/navbar
 
-
 fn start_server() -> Result(process.Pid, Nil) {
   // Start mist server
   let empty_body = mist.Bytes(bytes_builder.new())
