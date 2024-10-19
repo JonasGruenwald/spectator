@@ -1,8 +1,10 @@
 import gleam/bytes_builder
 import gleam/erlang
 import gleam/erlang/process
+import gleam/http
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
+import gleam/int
 import gleam/io
 import gleam/json
 import gleam/option
@@ -14,31 +16,26 @@ import lustre/attribute
 import lustre/element
 import lustre/element/html.{html}
 import lustre/server_component
-import mist.{
-  type Connection, type ResponseData, type WebsocketConnection,
-  type WebsocketMessage,
-}
-
+import mist.{type Connection, type ResponseData, type WebsocketConnection}
 import spectator/internal/api
-import spectator/internal/components/processes_live.{type ProcessesLive}
+import spectator/internal/components/processes_live
 import spectator/internal/utils
 import spectator/internal/views/navbar
 
-fn start_server() -> Result(process.Pid, Nil) {
+fn start_server(port: Int) -> Result(process.Pid, Nil) {
   // Start mist server
   let empty_body = mist.Bytes(bytes_builder.new())
   let not_found = response.set_body(response.new(404), empty_body)
   let server_result =
     fn(req: Request(Connection)) -> Response(ResponseData) {
       case request.path_segments(req) {
-        ["process-feed"] ->
-          mist.websocket(
-            request: req,
-            on_init: socket_init,
-            on_close: socket_close,
-            handler: socket_update,
-          )
-        ["processes"] -> show_process_page()
+        ["process-feed"] -> connect_server_component(req, processes_live.app)
+        [] -> {
+          response.new(302)
+          |> response.prepend_header("location", "/processes")
+          |> response.set_body(empty_body)
+        }
+        ["processes"] -> render_server_component("Processes", "process-feed")
         // Serve static server component
         ["lustre-server-component.mjs"] -> {
           let assert Ok(priv) = erlang.priv_directory("lustre")
@@ -59,7 +56,21 @@ fn start_server() -> Result(process.Pid, Nil) {
       }
     }
     |> mist.new
-    |> mist.port(3000)
+    |> mist.after_start(fn(port, scheme, interface) {
+      let address = case interface {
+        mist.IpV6(..) -> "[" <> mist.ip_address_to_string(interface) <> "]"
+        _ -> mist.ip_address_to_string(interface)
+      }
+      let message =
+        "🔍 Spectator is listening on "
+        <> http.scheme_to_string(scheme)
+        <> "://"
+        <> address
+        <> ":"
+        <> int.to_string(port)
+      io.println(message)
+    })
+    |> mist.port(port)
     |> mist.start_http
 
   // Extract PID for supervisor
@@ -76,11 +87,17 @@ fn start_server() -> Result(process.Pid, Nil) {
   }
 }
 
-/// Start the spectator application
+/// Start the spectator application on port 3000
 pub fn start() {
+  start_on(3000)
+}
+
+pub fn start_on(port: Int) {
   sup.new(sup.OneForOne)
   |> sup.add(sup.worker_child("Spectator Tag Manager", api.start_tag_manager))
-  |> sup.add(sup.worker_child("Spectator Mist Server", start_server))
+  |> sup.add(
+    sup.worker_child("Spectator Mist Server", fn() { start_server(port) }),
+  )
   |> sup.start_link()
 }
 
@@ -114,11 +131,7 @@ pub fn tag_result(
   }
 }
 
-fn show_process_page() {
-  render_component("Spectator | Processes", "process-feed")
-}
-
-fn render_component(title: String, path: String) {
+fn render_server_component(title: String, server_component_path path: String) {
   let res = response.new(200)
   let styles = utils.static_file("styles.css")
   let html =
@@ -135,7 +148,7 @@ fn render_component(title: String, path: String) {
         html.style([], styles),
       ]),
       html.body([], [
-        navbar.render(),
+        navbar.render(title),
         element.element(
           "lustre-server-component",
           [server_component.route("/" <> path)],
@@ -154,69 +167,69 @@ fn render_component(title: String, path: String) {
 
 //  SERVER COMPONENT WIRING ----------------------------------------------------
 
-fn socket_init(
-  _conn: WebsocketConnection,
-) -> #(
-  ProcessesLive,
-  option.Option(process.Selector(lustre.Patch(processes_live.Msg))),
-) {
-  let self = process.new_subject()
-  let app = processes_live.app()
-  let assert Ok(live_component) = lustre.start_actor(app, 0)
+fn connect_server_component(req: Request(Connection), lustre_application) {
+  let socket_init = fn(_conn: WebsocketConnection) {
+    let self = process.new_subject()
+    let app = lustre_application()
+    let assert Ok(live_component) = lustre.start_actor(app, 0)
 
-  tag_subject(live_component, "__spectator_internal Component")
+    tag_subject(live_component, "__spectator_internal Server Component")
 
-  process.send(
-    live_component,
-    server_component.subscribe(
-      // server components can have many connected clients, so we need a way to
-      // identify this client.
-      "ws",
-      process.send(self, _),
-    ),
-  )
+    process.send(
+      live_component,
+      server_component.subscribe(
+        // server components can have many connected clients, so we need a way to
+        // identify this client.
+        "ws",
+        process.send(self, _),
+      ),
+    )
 
-  #(
-    // we store the server component's `Subject` as this socket's state so we
-    // can shut it down when the socket is closed.
-    live_component,
-    option.Some(process.selecting(process.new_selector(), self, fn(a) { a })),
-  )
-}
+    #(
+      // we store the server component's `Subject` as this socket's state so we
+      // can shut it down when the socket is closed.
+      live_component,
+      option.Some(process.selecting(process.new_selector(), self, fn(a) { a })),
+    )
+  }
 
-fn socket_update(
-  live_component: ProcessesLive,
-  conn: WebsocketConnection,
-  msg: WebsocketMessage(lustre.Patch(processes_live.Msg)),
-) {
-  case msg {
-    mist.Text(json) -> {
-      // we attempt to decode the incoming text as an action to send to our
-      // server component runtime.
-      let action = json.decode(json, server_component.decode_action)
+  let socket_update = fn(live_component, conn: WebsocketConnection, msg) {
+    case msg {
+      mist.Text(json) -> {
+        // we attempt to decode the incoming text as an action to send to our
+        // server component runtime.
+        let action = json.decode(json, server_component.decode_action)
 
-      case action {
-        Ok(action) -> process.send(live_component, action)
-        Error(_) -> Nil
+        case action {
+          Ok(action) -> process.send(live_component, action)
+          Error(_) -> Nil
+        }
+
+        actor.continue(live_component)
       }
 
-      actor.continue(live_component)
-    }
+      mist.Binary(_) -> actor.continue(live_component)
+      mist.Custom(patch) -> {
+        let assert Ok(_) =
+          patch
+          |> server_component.encode_patch
+          |> json.to_string
+          |> mist.send_text_frame(conn, _)
 
-    mist.Binary(_) -> actor.continue(live_component)
-    mist.Custom(patch) -> {
-      let assert Ok(_) =
-        patch
-        |> server_component.encode_patch
-        |> json.to_string
-        |> mist.send_text_frame(conn, _)
-
-      actor.continue(live_component)
+        actor.continue(live_component)
+      }
+      mist.Closed | mist.Shutdown -> actor.Stop(process.Normal)
     }
-    mist.Closed | mist.Shutdown -> actor.Stop(process.Normal)
   }
-}
 
-fn socket_close(live_component: ProcessesLive) {
-  process.send(live_component, lustre.shutdown())
+  let socket_close = fn(live_component) {
+    process.send(live_component, lustre.shutdown())
+  }
+
+  mist.websocket(
+    request: req,
+    on_init: socket_init,
+    on_close: socket_close,
+    handler: socket_update,
+  )
 }

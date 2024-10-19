@@ -58,6 +58,16 @@ dt {
   margin-bottom: 5px;
 }
 
+button {
+  background: var(--background);
+  border: 1px solid var(--text);
+}
+
+button:hover{
+  background: var(--text);
+  color: var(--background);
+}
+
 /* Top Navigational Bar  */
 .topbar {
   display: flex;
@@ -211,8 +221,9 @@ tbody tr.tagged.selected {
 
 /* Process Details View */
 .details {
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr;
   width: 100vw;
   overflow: hidden;
 }
@@ -220,18 +231,7 @@ tbody tr.tagged.selected {
 .details>div {
   height: 250px;
   overflow: auto;
-  flex-basis: 50%;
-  flex-grow: 0;
-  flex-shrink: 0;
   overscroll-behavior: none;
-}
-
-.details .general {
-  border-right: 1px solid var(--text);
-}
-
-.otp-placeholder {
-  padding: 2px;
 }
 
 .panel-heading {
@@ -245,9 +245,23 @@ tbody tr.tagged.selected {
   height: 1.2em;
   display: flex;
   align-items: center;
+  grid-column: span 2;
 }
 
 .panel-content {
   padding: 5px;
   overflow: auto;
+}
+
+.details .general {
+  border-right: 1px solid var(--text);
+}
+
+.otp-placeholder {
+  padding: 2px;
+}
+
+.otp-toggle {
+  margin-left: auto;
+  cursor: pointer;
 }

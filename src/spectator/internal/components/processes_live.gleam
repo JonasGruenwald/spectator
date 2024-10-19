@@ -102,6 +102,7 @@ pub opaque type Msg {
   CreatedSubject(process.Subject(Msg))
   ProcessClicked(api.ProcessItem)
   HeadingClicked(api.InfoSortCriteria)
+  OtpStateClicked(api.ProcessItem, api.SysState)
 }
 
 fn do_refresh(model: Model) -> Model {
@@ -134,7 +135,11 @@ fn do_refresh(model: Model) -> Model {
 fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
   case msg {
     Refresh -> {
-      #(do_refresh(model), emit_after(interval, Refresh, model.subject))
+      let new_model = do_refresh(model)
+      case new_model.active_process {
+        Some(p) -> #(new_model, request_otp_details(p.pid, model.subject))
+        None -> #(new_model, effect.none())
+      }
     }
     CreatedSubject(subject) -> #(
       Model(..model, subject: Some(subject)),
@@ -177,6 +182,18 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         _ -> #(model, effect.none())
       }
     }
+    OtpStateClicked(p, target_sys_state) -> {
+      case target_sys_state {
+        api.Suspended -> {
+          api.resume(p.pid)
+          #(do_refresh(model), request_otp_details(p.pid, model.subject))
+        }
+        api.Running -> {
+          api.suspend(p.pid)
+          #(do_refresh(model), request_otp_details(p.pid, model.subject))
+        }
+      }
+    }
   }
 }
 
@@ -193,5 +210,6 @@ fn view(model: Model) -> Element(Msg) {
     model.sort_criteria,
     model.sort_direction,
     HeadingClicked,
+    OtpStateClicked,
   )
 }

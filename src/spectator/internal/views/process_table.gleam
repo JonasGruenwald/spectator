@@ -35,6 +35,7 @@ fn render_details(
   d: Option(api.ProcessDetails),
   status: Option(api.Status),
   state: Option(dynamic.Dynamic),
+  handle_otp_state_click: fn(api.ProcessItem, api.SysState) -> a,
 ) {
   case p, d {
     Some(proc), Some(details) ->
@@ -126,6 +127,32 @@ fn render_details(
               html.div([attribute.class("panel-heading")], [
                 html.strong([], [html.text("☎️ OTP Process: ")]),
                 display.atom(status.module),
+                case status.sys_state {
+                  api.Suspended -> {
+                    html.button(
+                      [
+                        event.on_click(handle_otp_state_click(
+                          proc,
+                          status.sys_state,
+                        )),
+                        attribute.class("otp-toggle resume"),
+                      ],
+                      [html.text("🏃‍♀️‍➡️ Resume")],
+                    )
+                  }
+                  api.Running -> {
+                    html.button(
+                      [
+                        event.on_click(handle_otp_state_click(
+                          proc,
+                          status.sys_state,
+                        )),
+                        attribute.class("otp-toggle suspend"),
+                      ],
+                      [html.text("✋ Suspend")],
+                    )
+                  }
+                },
               ]),
               html.div([attribute.class("panel-content")], [
                 html.pre([], [html.text(pprint.format(state))]),
@@ -199,6 +226,7 @@ pub fn render(
   sort_criteria: api.InfoSortCriteria,
   sort_direction: api.SortDirection,
   handle_heading_click: fn(api.InfoSortCriteria) -> a,
+  handle_otp_state_click: fn(api.ProcessItem, api.SysState) -> a,
 ) {
   html.table([], [
     html.thead([], [
@@ -285,7 +313,7 @@ pub fn render(
     html.tfoot([], [
       html.tr([], [
         html.td([attribute.attribute("colspan", "7")], [
-          render_details(active, details, status, state),
+          render_details(active, details, status, state, handle_otp_state_click),
         ]),
       ]),
     ]),

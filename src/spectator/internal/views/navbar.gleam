@@ -116,26 +116,26 @@ fn icon() {
   )
 }
 
-fn tab(title: String, active: Bool) {
-  let classes = case active {
+fn tab(title: String, current: String) {
+  let classes = case title == current {
     True -> "tab active"
     False -> "tab"
   }
   html.div([attribute.class(classes)], [html.text(title)])
 }
 
-pub fn render() {
+pub fn render(current_tab: String) {
   html.nav([attribute.class("topbar")], [
     html.div([attribute.class("logo")], [icon(), html.text("Spectator")]),
     html.div([attribute.class("filler")], []),
     html.div([attribute.class("tabs")], [
-      tab("Processes", True),
+      tab("Processes", current_tab),
       html.div([attribute.class("separator")], []),
-      tab("ETS", False),
+      tab("ETS", current_tab),
       html.div([attribute.class("separator")], []),
-      tab("Ports", False),
+      tab("Ports", current_tab),
       html.div([attribute.class("separator")], []),
-      tab("Stats", False),
+      tab("Stats", current_tab),
     ]),
     html.div([attribute.class("filler")], []),
   ])
