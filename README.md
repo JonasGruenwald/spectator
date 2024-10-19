@@ -6,6 +6,23 @@ Spectator is a BEAM observer tool written in Gleam, that plays well with gleam_o
 
 ![](https://raw.githubusercontent.com/JonasGruenwald/spectator/refs/heads/main/priv/screenshot.png)
 
+## Note
+
+This is a work in progress, so far it has the following features:
+
+- Show processes in a sortable table
+- Tag individual processes for easy identification
+- Show process details
+- Show OTP process state
+- Suspend / resume OTP processes
+
+The goal is to extend it with these features in the future:
+
+- [ ] ETS table inspector
+- [ ] List of active Ports
+- [ ] Basic system statistics
+- [ ] Pretty print dynamic data into HTML for nicer state inspection
+
 ## Installation
 
 ```sh

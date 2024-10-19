@@ -1,4 +1,3 @@
-import chrobot
 import gleam/erlang/process
 import spectator
 import utils/pantry
