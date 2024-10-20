@@ -25,6 +25,10 @@ pub fn reference(ref: erlang.Reference) {
   html.text(string.inspect(ref))
 }
 
+pub fn storage_words(words: Int) {
+  storage(words * api.get_word_size())
+}
+
 pub fn storage(size: Int) {
   case size {
     _s if size < 1024 -> html.text(int.to_string(size) <> " B")

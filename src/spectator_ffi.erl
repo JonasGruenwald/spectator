@@ -9,7 +9,8 @@
     format_port/1,
     list_ets_tables/0,
     get_ets_data/1,
-    new_ets_table/1
+    new_ets_table/1,
+    get_word_size/0
 ]).
 
 % Get the status of an OTP-compatible process or return an error
@@ -207,6 +208,9 @@ new_ets_table(Name) ->
     catch
         error:badarg -> {error, nil}
     end.
+
+get_word_size() ->
+    erlang:system_info(wordsize).
 
 % into_gleam_type(Proplist, ConstructorName, OrderedKeys) ->
 %     Values = lists:map(fun(Key) -> proplists:get_value(Key, Proplist) end, OrderedKeys),

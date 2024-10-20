@@ -1,11 +1,15 @@
+import gleam/erlang/process
 import gleam/list
+import gleam/option.{type Option, None, Some}
 import gleam/result
 import lustre
 import lustre/attribute
 import lustre/effect
 import lustre/element.{type Element}
 import lustre/element/html
+import lustre/server_component
 import spectator/internal/api
+import spectator/internal/common
 import spectator/internal/views/display
 import spectator/internal/views/table
 
@@ -19,22 +23,46 @@ pub fn app() {
 
 pub type Model {
   Model(
+    subject: Option(process.Subject(Msg)),
     tables: List(api.Table),
     sort_criteria: api.TableSortCriteria,
     sort_direction: api.SortDirection,
   )
 }
 
+fn emit_after(
+  delay: Int,
+  msg: Msg,
+  subject: Option(process.Subject(Msg)),
+) -> effect.Effect(Msg) {
+  case subject {
+    Some(self) -> {
+      use _ <- effect.from
+      let _ = process.send_after(self, delay, msg)
+      Nil
+    }
+    None -> {
+      use dispatch, subject <- server_component.select
+      let selector =
+        process.new_selector() |> process.selecting(subject, fn(msg) { msg })
+      let _ = process.send_after(subject, delay, msg)
+      dispatch(CreatedSubject(subject))
+      selector
+    }
+  }
+}
+
 fn init(_) {
-  let defaul_sort_criteria = api.TableName
-  let defaul_sort_direction = api.Ascending
+  let defaul_sort_criteria = api.Size
+  let defaul_sort_direction = api.Descending
   #(
     Model(
+      subject: None,
       tables: get_sorted_tables(defaul_sort_criteria, defaul_sort_direction),
       sort_criteria: defaul_sort_criteria,
       sort_direction: defaul_sort_direction,
     ),
-    effect.none(),
+    emit_after(common.refresh_interval, Refresh, None),
   )
 }
 
@@ -43,6 +71,7 @@ fn init(_) {
 pub opaque type Msg {
   Refresh
   HeadingClicked(api.TableSortCriteria)
+  CreatedSubject(process.Subject(Msg))
 }
 
 fn get_sorted_tables(sort_criteria, sort_direction) -> List(api.Table) {
@@ -58,6 +87,10 @@ fn update(model: Model, msg: Msg) {
         tables: result.unwrap(api.list_ets_tables(), [])
           |> api.sort_table_list(model.sort_criteria, model.sort_direction),
       ),
+      emit_after(common.refresh_interval, Refresh, model.subject),
+    )
+    CreatedSubject(subject) -> #(
+      Model(..model, subject: Some(subject)),
       effect.none(),
     )
     HeadingClicked(criteria) -> {
@@ -92,15 +125,6 @@ fn view(model: Model) -> Element(Msg) {
   html.table([], [
     html.thead([], [
       html.tr([], [
-        // table.heading(
-        //   "ID",
-        //   "Table Identifier",
-        //   api.TableId,
-        //   model.sort_criteria,
-        //   model.sort_direction,
-        //   HeadingClicked,
-        //   False,
-        // ),
         table.heading(
           "Name",
           "Table Name",
@@ -179,14 +203,15 @@ fn view(model: Model) -> Element(Msg) {
       [],
       list.map(model.tables, fn(t) {
         html.tr([], [
-          // html.td([], [display.reference(t.id)]),
           html.td([], [display.atom(t.name)]),
           html.td([], [display.atom(t.table_type)]),
           html.td([attribute.class("cell-right")], [
             display.number(t.size),
             html.text(" items"),
           ]),
-          html.td([attribute.class("cell-right")], [display.storage(t.memory)]),
+          html.td([attribute.class("cell-right")], [
+            display.storage_words(t.memory),
+          ]),
           html.td([attribute.class("cell-right")], [display.pid(t.owner)]),
           html.td([attribute.class("cell-right")], [display.atom(t.protection)]),
           html.td([attribute.class("cell-right")], [
@@ -198,5 +223,15 @@ fn view(model: Model) -> Element(Msg) {
         ])
       }),
     ),
+    html.tfoot([], [
+      html.tr([], [
+        html.td([attribute.attribute("colspan", "8")], [
+          html.div([attribute.class("ets-footer")], [
+            display.number(list.length(model.tables)),
+            html.text(" tables found in total"),
+          ]),
+        ]),
+      ]),
+    ]),
   ])
 }

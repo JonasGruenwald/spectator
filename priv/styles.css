@@ -64,7 +64,7 @@ button {
   color: var(--text);
 }
 
-button:hover{
+button:hover {
   background: var(--text);
   color: var(--background);
 }
@@ -119,7 +119,7 @@ button:hover{
   color: var(--text);
 }
 
-.tab.disabled{
+.tab.disabled {
   cursor: not-allowed;
 }
 
@@ -135,7 +135,7 @@ button:hover{
 /* Table View */
 table {
   width: 100%;
-  height: 100%;
+  min-height: 100vh;
   border-spacing: 0;
 }
 
@@ -194,7 +194,8 @@ td {
   overflow: hidden;
 }
 
-td.cell-right, th.cell-right {
+td.cell-right,
+th.cell-right {
   text-align: right;
 }
 
@@ -268,7 +269,8 @@ tbody tr.tagged.selected {
   border-right: 1px solid var(--text);
 }
 
-.otp-placeholder {
+.otp-placeholder,
+.ets-footer {
   padding: 2px;
 }
 

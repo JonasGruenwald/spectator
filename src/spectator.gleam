@@ -19,7 +19,7 @@ import lustre/server_component
 import mist.{type Connection, type ResponseData, type WebsocketConnection}
 import spectator/internal/api
 import spectator/internal/common
-import spectator/internal/components/ets
+import spectator/internal/components/ets_live
 import spectator/internal/components/processes_live
 import spectator/internal/views/navbar
 
@@ -35,7 +35,7 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
         ["ets"] -> render_server_component("ETS", "ets-feed")
         // WebSocket Routes
         ["process-feed"] -> connect_server_component(req, processes_live.app)
-        ["ets-feed"] -> connect_server_component(req, ets.app)
+        ["ets-feed"] -> connect_server_component(req, ets_live.app)
         // Static files
         ["lustre-server-component.mjs"] -> {
           let assert Ok(priv) = erlang.priv_directory("lustre")

@@ -376,6 +376,9 @@ pub fn get_ets_data(
   table: atom.Atom,
 ) -> Result(List(List(#(dynamic.Dynamic, dynamic.Dynamic))), Nil)
 
+@external(erlang, "spectator_ffi", "get_word_size")
+pub fn get_word_size() -> Int
+
 // Tag manager (gen_server)
 
 @external(erlang, "spectator_tag_manager", "start_link")

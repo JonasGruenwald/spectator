@@ -37,9 +37,6 @@ pub type Model {
   )
 }
 
-pub type ProcessesLive =
-  process.Subject(lustre.Action(Msg, lustre.ServerComponent))
-
 fn emit_after(
   delay: Int,
   msg: Msg,
@@ -56,8 +53,6 @@ fn emit_after(
       let selector =
         process.new_selector() |> process.selecting(subject, fn(msg) { msg })
       let _ = process.send_after(subject, delay, msg)
-      // dispatch a message so you can store this `subject` and
-      // re-use it.
       dispatch(CreatedSubject(subject))
       selector
     }
