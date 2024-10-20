@@ -1,6 +1,6 @@
 //// An implementation of a "pantry" using an actor.
-//// 
-//// 
+//// Taken from this guide:
+//// https://github.com/bcpeinhardt/learn_otp_with_gleam
 
 import gleam/erlang/process.{type Subject}
 import gleam/otp/actor
