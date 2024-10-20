@@ -1,4 +1,5 @@
 //// View functions for rendering the top navigation bar
+
 import lustre/attribute.{attribute}
 import lustre/element/html
 import lustre/element/svg

@@ -1,10 +1,10 @@
 /// View functions for displaying all kinds of data from the system
-import gleam/string
 import gleam/erlang
 import gleam/erlang/atom
 import gleam/erlang/port
 import gleam/erlang/process
 import gleam/int
+import gleam/string
 import lustre/element/html
 import spectator/internal/api
 
