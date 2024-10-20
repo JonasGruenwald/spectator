@@ -1,3 +1,4 @@
+import gleam/bool
 import gleam/dynamic
 import gleam/erlang
 import gleam/erlang/atom
@@ -16,8 +17,17 @@ pub type SysState {
 }
 
 pub type Table {
-  NamedTable(atom.Atom)
-  Table(erlang.Reference)
+  Table(
+    id: erlang.Reference,
+    name: atom.Atom,
+    table_type: atom.Atom,
+    size: Int,
+    memory: Int,
+    owner: process.Pid,
+    protection: atom.Atom,
+    read_concurrency: Bool,
+    write_concurrency: Bool,
+  )
 }
 
 pub type SystemPrimitive {
@@ -81,6 +91,18 @@ pub type InfoSortCriteria {
   Reductions
   MessageQueue
   ProcessStatus
+}
+
+pub type TableSortCriteria {
+  TableId
+  TableName
+  TableType
+  Size
+  TableMemory
+  Owner
+  Protection
+  ReadConcurrency
+  WriteConcurrency
 }
 
 pub type SortDirection {
@@ -231,6 +253,73 @@ pub fn sort_info_list(
   }
 }
 
+pub fn sort_table_list(
+  input: List(Table),
+  criteria: TableSortCriteria,
+  direction: SortDirection,
+) -> List(Table) {
+  case criteria {
+    TableId -> {
+      list.sort(input, fn(a, b) {
+        string.compare(string.inspect(a.id), string.inspect(b.id))
+        |> apply_direction(direction)
+      })
+    }
+    TableName -> {
+      list.sort(input, fn(a, b) {
+        string.compare(atom.to_string(a.name), atom.to_string(b.name))
+        |> apply_direction(direction)
+      })
+    }
+    TableType -> {
+      list.sort(input, fn(a, b) {
+        string.compare(
+          atom.to_string(a.table_type),
+          atom.to_string(b.table_type),
+        )
+        |> apply_direction(direction)
+      })
+    }
+    Size -> {
+      list.sort(input, fn(a, b) {
+        int.compare(a.size, b.size) |> apply_direction(direction)
+      })
+    }
+    TableMemory -> {
+      list.sort(input, fn(a, b) {
+        int.compare(a.memory, b.memory) |> apply_direction(direction)
+      })
+    }
+    Owner -> {
+      list.sort(input, fn(a, b) {
+        string.compare(string.inspect(a.owner), string.inspect(b.owner))
+        |> apply_direction(direction)
+      })
+    }
+    Protection -> {
+      list.sort(input, fn(a, b) {
+        string.compare(
+          atom.to_string(a.protection),
+          atom.to_string(b.protection),
+        )
+        |> apply_direction(direction)
+      })
+    }
+    ReadConcurrency -> {
+      list.sort(input, fn(a, b) {
+        bool.compare(a.read_concurrency, b.read_concurrency)
+        |> apply_direction(direction)
+      })
+    }
+    WriteConcurrency -> {
+      list.sort(input, fn(a, b) {
+        bool.compare(a.write_concurrency, b.write_concurrency)
+        |> apply_direction(direction)
+      })
+    }
+  }
+}
+
 // Direct bindings to Erlang APIs
 
 @external(erlang, "sys", "suspend")
@@ -277,7 +366,7 @@ pub fn format_pid(pid: process.Pid) -> String
 pub fn format_port(port: port.Port) -> String
 
 @external(erlang, "spectator_ffi", "list_ets_tables")
-pub fn list_ets_tables() -> List(Table)
+pub fn list_ets_tables() -> Result(List(Table), Nil)
 
 @external(erlang, "spectator_ffi", "new_ets_table")
 pub fn new_ets_table(name: atom.Atom) -> Result(atom.Atom, Nil)

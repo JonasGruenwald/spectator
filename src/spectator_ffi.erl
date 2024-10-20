@@ -168,15 +168,28 @@ format_port(Port) ->
     list_to_bitstring(port_to_list(Port)).
 
 list_ets_tables() ->
-    lists:map(
-        fun(Item) ->
-            case Item of
-                I when is_atom(Item) -> {named_table, I};
-                _ -> {table, Item}
-            end
-        end,
-        ets:all()
-    ).
+    try
+        {ok,
+            lists:map(
+                fun(Table) ->
+                    {
+                        table,
+                        ets:info(Table, id),
+                        ets:info(Table, name),
+                        ets:info(Table, type),
+                        ets:info(Table, size),
+                        ets:info(Table, memory),
+                        ets:info(Table, owner),
+                        ets:info(Table, protection),
+                        ets:info(Table, read_concurrency),
+                        ets:info(Table, write_concurrency)
+                    }
+                end,
+                ets:all()
+            )}
+    catch
+        error:badarg -> {error, nil}
+    end.
 
 get_ets_data(Table) ->
     try
@@ -194,3 +207,7 @@ new_ets_table(Name) ->
     catch
         error:badarg -> {error, nil}
     end.
+
+% into_gleam_type(Proplist, ConstructorName, OrderedKeys) ->
+%     Values = lists:map(fun(Key) -> proplists:get_value(Key, Proplist) end, OrderedKeys),
+%     list_to_tuple([ConstructorName | Values]).

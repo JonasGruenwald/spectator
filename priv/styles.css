@@ -194,6 +194,10 @@ td {
   overflow: hidden;
 }
 
+td.cell-right, th.cell-right {
+  text-align: right;
+}
+
 tbody td:first-of-type,
 thead th:first-of-type {
   padding-left: 5px;

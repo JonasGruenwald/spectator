@@ -1,3 +1,4 @@
+//// View functions for rendering the top navigation bar
 import lustre/attribute.{attribute}
 import lustre/element/html
 import lustre/element/svg
@@ -139,7 +140,7 @@ pub fn render(current_tab: String) {
     html.div([attribute.class("tabs")], [
       tab("Processes", current_tab, "/processes"),
       html.div([attribute.class("separator")], []),
-      tab("ETS", current_tab, ""),
+      tab("ETS", current_tab, "/ets"),
       html.div([attribute.class("separator")], []),
       tab("Ports", current_tab, ""),
       html.div([attribute.class("separator")], []),

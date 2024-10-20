@@ -1,3 +1,6 @@
+/// View functions for displaying all kinds of data from the system
+import gleam/string
+import gleam/erlang
 import gleam/erlang/atom
 import gleam/erlang/port
 import gleam/erlang/process
@@ -15,6 +18,11 @@ pub fn port(port: port.Port) {
 
 pub fn atom(a: atom.Atom) {
   html.text(atom.to_string(a))
+}
+
+pub fn reference(ref: erlang.Reference) {
+  // TODO: Implement inspect for Reference via FFI
+  html.text(string.inspect(ref))
 }
 
 pub fn storage(size: Int) {

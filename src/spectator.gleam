@@ -19,6 +19,7 @@ import lustre/server_component
 import mist.{type Connection, type ResponseData, type WebsocketConnection}
 import spectator/internal/api
 import spectator/internal/common
+import spectator/internal/components/ets
 import spectator/internal/components/processes_live
 import spectator/internal/views/navbar
 
@@ -29,14 +30,13 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
   let server_result =
     fn(req: Request(Connection)) -> Response(ResponseData) {
       case request.path_segments(req) {
-        ["process-feed"] -> connect_server_component(req, processes_live.app)
-        [] -> {
-          response.new(302)
-          |> response.prepend_header("location", "/processes")
-          |> response.set_body(empty_body)
-        }
+        // App Routes
         ["processes"] -> render_server_component("Processes", "process-feed")
-        // Serve static server component
+        ["ets"] -> render_server_component("ETS", "ets-feed")
+        // WebSocket Routes
+        ["process-feed"] -> connect_server_component(req, processes_live.app)
+        ["ets-feed"] -> connect_server_component(req, ets.app)
+        // Static files
         ["lustre-server-component.mjs"] -> {
           let assert Ok(priv) = erlang.priv_directory("lustre")
           let path = priv <> "/static/lustre-server-component.mjs"
@@ -64,6 +64,12 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
             response.new(404)
             |> response.set_body(mist.Bytes(bytes_builder.new()))
           })
+        }
+        // Redirect to processes by default
+        [] -> {
+          response.new(302)
+          |> response.prepend_header("location", "/processes")
+          |> response.set_body(empty_body)
         }
 
         _ -> not_found
