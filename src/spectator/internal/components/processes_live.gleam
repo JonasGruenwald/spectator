@@ -6,9 +6,8 @@ import lustre/effect
 import lustre/element.{type Element}
 import lustre/server_component
 import spectator/internal/api
+import spectator/internal/common
 import spectator/internal/views/process_table
-
-const interval = 500
 
 // MAIN ------------------------------------------------------------------------
 
@@ -90,7 +89,7 @@ fn init(_) -> #(Model, effect.Effect(Msg)) {
       status: option.None,
       state: option.None,
     ),
-    emit_after(interval, Refresh, option.None),
+    emit_after(common.refresh_interval, Refresh, option.None),
   )
 }
 
@@ -137,14 +136,17 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
     Refresh -> {
       let new_model = do_refresh(model)
       case new_model.active_process {
-        Some(p) -> #(
+        Some(p) if p.info.message_queue_len < common.message_queue_threshold -> #(
           new_model,
           effect.batch([
             request_otp_details(p.pid, model.subject),
-            emit_after(interval, Refresh, option.None),
+            emit_after(common.refresh_interval, Refresh, option.None),
           ]),
         )
-        None -> #(new_model, emit_after(interval, Refresh, option.None))
+        _ -> #(
+          new_model,
+          emit_after(common.refresh_interval, Refresh, option.None),
+        )
       }
     }
     CreatedSubject(subject) -> #(

@@ -24,7 +24,6 @@ pub fn main() {
   // |> spectator.tag_result("Chrobot Browser")
 
   // let assert Ok(_) = chrobot.open(browser, "http://127.0.0.1:3000/processes/", 5_000)
-
   // Sleep on the main process so the program doesn't exit
   process.sleep_forever()
 }

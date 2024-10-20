@@ -18,8 +18,8 @@ import lustre/element/html.{html}
 import lustre/server_component
 import mist.{type Connection, type ResponseData, type WebsocketConnection}
 import spectator/internal/api
+import spectator/internal/common
 import spectator/internal/components/processes_live
-import spectator/internal/utils
 import spectator/internal/views/navbar
 
 fn start_server(port: Int) -> Result(process.Pid, Nil) {
@@ -147,7 +147,7 @@ pub fn tag_result(
 
 fn render_server_component(title: String, server_component_path path: String) {
   let res = response.new(200)
-  let styles = utils.static_file("styles.css")
+  let styles = common.static_file("styles.css")
   let html =
     html([], [
       html.head([], [

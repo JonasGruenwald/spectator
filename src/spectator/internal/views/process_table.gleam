@@ -7,6 +7,7 @@ import lustre/element/html
 import lustre/event
 import pprint
 import spectator/internal/api
+import spectator/internal/common
 import spectator/internal/views/display
 import spectator/internal/views/icon
 
@@ -159,6 +160,24 @@ fn render_details(
               ]),
             ]
           }
+          _, _ if proc.info.message_queue_len >= common.message_queue_threshold -> [
+            html.div([attribute.class("panel-content")], [
+              html.strong([], [
+                html.text(
+                  "⚠️ Spectator has stopped trying to inspect the OTP state of this process",
+                ),
+              ]),
+              html.p([], [
+                html.text("The message queue length is above the threshold of "),
+                display.number(common.message_queue_threshold),
+                html.text("."),
+                html.br([]),
+                html.text(
+                  "Spectator will not send it any more system messages to avoid filling the message queue.",
+                ),
+              ]),
+            ]),
+          ]
           _, _ -> [
             html.div([attribute.class("panel-content")], [
               html.text("This process does not appear to be OTP-compliant"),
