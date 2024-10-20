@@ -142,3 +142,28 @@ pub fn tag_test() {
   api.get_tag(pid)
   |> should.be_none
 }
+
+pub fn ets_test() {
+  let table_name = atom.create_from_string("test_table")
+  api.new_ets_table(table_name)
+  |> should.be_ok
+
+  api.ets_insert(table_name, [#("hello", "joe")])
+
+  api.list_ets_tables()
+  |> list.find(fn(t) {
+    case t {
+      api.NamedTable(name) if name == table_name -> True
+      _ -> False
+    }
+  })
+  |> should.be_ok
+
+  api.get_ets_data(table_name)
+  |> should.be_ok
+  |> list.first
+  |> should.be_ok
+  |> list.first
+  |> should.be_ok
+  |> should.equal(#(dynamic.from("hello"), dynamic.from("joe")))
+}

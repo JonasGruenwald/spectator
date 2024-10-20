@@ -1,4 +1,5 @@
 import gleam/dynamic
+import gleam/erlang
 import gleam/erlang/atom
 import gleam/erlang/port
 import gleam/erlang/process
@@ -12,6 +13,11 @@ import gleam/string
 pub type SysState {
   Running
   Suspended
+}
+
+pub type Table {
+  NamedTable(atom.Atom)
+  Table(erlang.Reference)
 }
 
 pub type SystemPrimitive {
@@ -225,6 +231,19 @@ pub fn sort_info_list(
   }
 }
 
+// Direct bindings to Erlang APIs
+
+@external(erlang, "sys", "suspend")
+pub fn suspend(pid: process.Pid) -> Nil
+
+@external(erlang, "sys", "resume")
+pub fn resume(pid: process.Pid) -> Nil
+
+@external(erlang, "ets", "insert")
+pub fn ets_insert(table: atom.Atom, tuple: List(#(k, v))) -> Nil
+
+// Spectator FFI
+
 @external(erlang, "spectator_ffi", "get_status")
 pub fn get_status(
   pid: process.Pid,
@@ -251,17 +270,24 @@ pub fn get_state(
   timeout: Int,
 ) -> Result(dynamic.Dynamic, dynamic.Dynamic)
 
-@external(erlang, "sys", "suspend")
-pub fn suspend(pid: process.Pid) -> Nil
-
-@external(erlang, "sys", "resume")
-pub fn resume(pid: process.Pid) -> Nil
-
 @external(erlang, "spectator_ffi", "format_pid")
 pub fn format_pid(pid: process.Pid) -> String
 
 @external(erlang, "spectator_ffi", "format_port")
 pub fn format_port(port: port.Port) -> String
+
+@external(erlang, "spectator_ffi", "list_ets_tables")
+pub fn list_ets_tables() -> List(Table)
+
+@external(erlang, "spectator_ffi", "new_ets_table")
+pub fn new_ets_table(name: atom.Atom) -> Result(atom.Atom, Nil)
+
+@external(erlang, "spectator_ffi", "get_ets_data")
+pub fn get_ets_data(
+  table: atom.Atom,
+) -> Result(List(List(#(dynamic.Dynamic, dynamic.Dynamic))), Nil)
+
+// Tag manager (gen_server)
 
 @external(erlang, "spectator_tag_manager", "start_link")
 pub fn start_tag_manager() -> Result(process.Pid, dynamic.Dynamic)

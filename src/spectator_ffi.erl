@@ -1,5 +1,16 @@
 -module(spectator_ffi).
--export([get_status/2, get_state/2, get_info/1, get_all_info/1, format_pid/1, get_details/1, format_port/1]).
+-export([
+    get_status/2,
+    get_state/2,
+    get_info/1,
+    get_all_info/1,
+    format_pid/1,
+    get_details/1,
+    format_port/1,
+    list_ets_tables/0,
+    get_ets_data/1,
+    new_ets_table/1
+]).
 
 % Get the status of an OTP-compatible process or return an error
 get_status(Name, Timeout) ->
@@ -156,4 +167,30 @@ format_pid(Pid) ->
 format_port(Port) ->
     list_to_bitstring(port_to_list(Port)).
 
+list_ets_tables() ->
+    lists:map(
+        fun(Item) ->
+            case Item of
+                I when is_atom(Item) -> {named_table, I};
+                _ -> {table, Item}
+            end
+        end,
+        ets:all()
+    ).
 
+get_ets_data(Table) ->
+    try
+        {ok, ets:match(Table, '$1')}
+    catch
+        error:badarg -> {error, nil}
+    end.
+
+new_ets_table(Name) ->
+    try
+        {ok,
+            ets:new(Name, [
+                named_table, public
+            ])}
+    catch
+        error:badarg -> {error, nil}
+    end.
