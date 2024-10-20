@@ -31,7 +31,7 @@ gleam add spectator@1
 
 ## Usage
 
-> 🦔 **Spectator is a tool intended to be used for debugging and inspecting applications in development, you should not include spectator in your production application**
+> 🦔 **Please be aware spectator is still new, and a work in progress, reliability is not guaranteed, use at your own peril!**
 
 Call `spectator.start()` in your application, to start the spectator service and WebUI.
 
