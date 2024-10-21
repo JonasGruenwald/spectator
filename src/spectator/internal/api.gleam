@@ -288,7 +288,7 @@ pub fn sort_table_data(
       let b_cell = disgustingly_index_into_list_at(b, sort_column)
       case a_cell, b_cell {
         Ok(a), Ok(b) ->
-          string.compare(string.inspect(a), string.inspect(b))
+          compare_dynamic_data(a, b)
           |> apply_direction(sort_direction)
         Ok(_a), Error(_b) -> order.Gt |> apply_direction(sort_direction)
         Error(_a), Ok(_b) -> order.Lt
@@ -458,6 +458,12 @@ pub fn opaque_tuple_to_list(tuple: OpaqueTuple) -> List(dynamic.Dynamic)
 
 @external(erlang, "spectator_ffi", "get_word_size")
 pub fn get_word_size() -> Int
+
+@external(erlang, "spectator_ffi", "compare_data")
+pub fn compare_dynamic_data(
+  a: dynamic.Dynamic,
+  b: dynamic.Dynamic,
+) -> order.Order
 
 // Tag manager (gen_server)
 

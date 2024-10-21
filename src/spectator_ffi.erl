@@ -12,7 +12,8 @@
     new_ets_table/1,
     get_word_size/0,
     opaque_tuple_to_list/1,
-    get_ets_table_info/1
+    get_ets_table_info/1,
+    compare_data/2
 ]).
 
 % Get the status of an OTP-compatible process or return an error
@@ -196,6 +197,13 @@ get_ets_table_info(Table) ->
     catch
         error:badarg -> {error, nil}
     end.
+
+compare_data(Data1, Data2) when Data1 < Data2 ->
+    lt;
+compare_data(Data1, Data2) when Data1 > Data2 ->
+    gt;
+compare_data(_Data1, _Data2) ->
+    eq.
 
 get_ets_data(Table) ->
     try

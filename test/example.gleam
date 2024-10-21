@@ -7,7 +7,7 @@ import spectator/internal/api
 import utils/pantry
 
 fn keep_adding_to_table(ets_table: atom.Atom, count: Int) {
-  io.debug("Adding another shrimp on the barbie")
+  io.debug("Putting another shrimp on the barbie")
   api.ets_insert(ets_table, [#(count, "Row number " <> int.to_string(count))])
   process.sleep(1000)
   keep_adding_to_table(ets_table, count + 1)
@@ -42,9 +42,9 @@ pub fn main() {
     ))
   api.ets_insert(table2, [#("Wibble", "Wobble")])
 
-    let assert Ok(table3) = api.new_ets_table(atom.create_from_string("Wibble Wooble"))
-    process.start(fn() { keep_adding_to_table(table3, 1) }, False)
-
+  let assert Ok(table3) =
+    api.new_ets_table(atom.create_from_string("Wibble Wooble"))
+  process.start(fn() { keep_adding_to_table(table3, 1) }, False)
 
   // Start another OTP actor and tag it for spectator
   // let assert Ok(browser) = chrobot.launch_window()
