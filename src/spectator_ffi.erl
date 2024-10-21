@@ -11,7 +11,8 @@
     get_ets_data/1,
     new_ets_table/1,
     get_word_size/0,
-    opaque_tuple_to_list/1
+    opaque_tuple_to_list/1,
+    get_ets_table_info/1
 ]).
 
 % Get the status of an OTP-compatible process or return an error
@@ -169,26 +170,29 @@ format_pid(Pid) ->
 format_port(Port) ->
     list_to_bitstring(port_to_list(Port)).
 
+build_table_info(Table) ->
+    {table, ets:info(Table, id), ets:info(Table, name), ets:info(Table, type),
+        ets:info(Table, size), ets:info(Table, memory), ets:info(Table, owner),
+        ets:info(Table, protection), ets:info(Table, read_concurrency),
+        ets:info(Table, write_concurrency)}.
+
 list_ets_tables() ->
     try
         {ok,
             lists:map(
-                fun(Table) ->
-                    {
-                        table,
-                        ets:info(Table, id),
-                        ets:info(Table, name),
-                        ets:info(Table, type),
-                        ets:info(Table, size),
-                        ets:info(Table, memory),
-                        ets:info(Table, owner),
-                        ets:info(Table, protection),
-                        ets:info(Table, read_concurrency),
-                        ets:info(Table, write_concurrency)
-                    }
-                end,
+                fun build_table_info/1,
                 ets:all()
             )}
+    catch
+        error:badarg -> {error, nil}
+    end.
+
+get_ets_table_info(Table) ->
+    try
+        case ets:info(Table, id) of
+            undefined -> {error, nil};
+            TableId -> {ok, build_table_info(TableId)}
+        end
     catch
         error:badarg -> {error, nil}
     end.

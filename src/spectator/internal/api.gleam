@@ -328,7 +328,7 @@ pub fn sort_table_list(
 }
 
 pub fn get_ets_data(table: Table) {
-  use raw_data <- result.try(get_raw_ets_data(table.name))
+  use raw_data <- result.try(get_raw_ets_data(table.id))
   process_raw_ets_data(raw_data, [], 0)
 }
 
@@ -403,12 +403,15 @@ pub fn format_port(port: port.Port) -> String
 @external(erlang, "spectator_ffi", "list_ets_tables")
 pub fn list_ets_tables() -> Result(List(Table), Nil)
 
+@external(erlang, "spectator_ffi", "get_ets_table_info")
+pub fn get_ets_table_info(name: atom.Atom) -> Result(Table, Nil)
+
 @external(erlang, "spectator_ffi", "new_ets_table")
 pub fn new_ets_table(name: atom.Atom) -> Result(atom.Atom, Nil)
 
 @external(erlang, "spectator_ffi", "get_ets_data")
 pub fn get_raw_ets_data(
-  table: atom.Atom,
+  table: erlang.Reference,
 ) -> Result(List(List(OpaqueTuple)), Nil)
 
 @external(erlang, "spectator_ffi", "opaque_tuple_to_list")

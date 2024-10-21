@@ -150,12 +150,13 @@ pub fn ets_test() {
 
   api.ets_insert(table_name, [#("hello", "joe")])
 
-  api.list_ets_tables()
-  |> should.be_ok
-  |> list.find(fn(t) { t.name == table_name })
-  |> should.be_ok
+  let table_item =
+    api.list_ets_tables()
+    |> should.be_ok
+    |> list.find(fn(t) { t.name == table_name })
+    |> should.be_ok
 
-  api.get_raw_ets_data(table_name)
+  api.get_raw_ets_data(table_item.id)
   |> should.be_ok
   |> list.first
   |> should.be_ok

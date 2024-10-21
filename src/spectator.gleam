@@ -19,7 +19,8 @@ import lustre/server_component
 import mist.{type Connection, type ResponseData, type WebsocketConnection}
 import spectator/internal/api
 import spectator/internal/common
-import spectator/internal/components/ets_live
+import spectator/internal/components/ets_overview_live
+import spectator/internal/components/ets_table_live
 import spectator/internal/components/processes_live
 import spectator/internal/views/navbar
 
@@ -33,9 +34,14 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
         // App Routes
         ["processes"] -> render_server_component("Processes", "process-feed")
         ["ets"] -> render_server_component("ETS", "ets-feed")
+        ["ets", table] -> render_server_component("ETS", "ets-feed/" <> table)
         // WebSocket Routes
-        ["process-feed"] -> connect_server_component(req, processes_live.app)
-        ["ets-feed"] -> connect_server_component(req, ets_live.app)
+        ["process-feed"] ->
+          connect_server_component(req, processes_live.app, Nil)
+        ["ets-feed"] ->
+          connect_server_component(req, ets_overview_live.app, Nil)
+        ["ets-feed", table] ->
+          connect_server_component(req, ets_table_live.app, table)
         // Static files
         ["lustre-server-component.mjs"] -> {
           let assert Ok(priv) = erlang.priv_directory("lustre")
@@ -192,11 +198,15 @@ fn render_server_component(title: String, server_component_path path: String) {
 
 //  SERVER COMPONENT WIRING ----------------------------------------------------
 
-fn connect_server_component(req: Request(Connection), lustre_application) {
+fn connect_server_component(
+  req: Request(Connection),
+  lustre_application,
+  flags: a,
+) {
   let socket_init = fn(_conn: WebsocketConnection) {
     let self = process.new_subject()
     let app = lustre_application()
-    let assert Ok(live_component) = lustre.start_actor(app, 0)
+    let assert Ok(live_component) = lustre.start_actor(app, flags)
 
     tag_subject(live_component, "__spectator_internal Server Component")
 

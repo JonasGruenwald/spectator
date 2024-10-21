@@ -208,6 +208,12 @@ th.cell-right {
   text-align: right;
 }
 
+td > a{
+  text-decoration: none;
+  color: var(--text);
+  display: block;
+}
+
 tbody td:first-of-type,
 thead th:first-of-type {
   padding-left: 5px;
@@ -290,7 +296,7 @@ tbody tr.tagged.selected {
 
 /* ETS */
 
-.ets-table-empty {
+.ets-table-error {
   width: 100%;
   height: 50vh;
   display: flex;

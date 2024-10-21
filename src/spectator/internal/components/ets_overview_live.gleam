@@ -3,6 +3,7 @@ import gleam/erlang/process
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
+import gleam/uri
 import lustre
 import lustre/attribute
 import lustre/effect
@@ -30,9 +31,6 @@ pub type Model {
     tables: List(api.Table),
     sort_criteria: api.TableSortCriteria,
     sort_direction: api.SortDirection,
-    // Relevant for inspected table
-    active_table: Option(api.Table),
-    active_table_data: Option(api.TableData),
   )
 }
 
@@ -67,8 +65,6 @@ fn init(_) {
       tables: get_sorted_tables(defaul_sort_criteria, defaul_sort_direction),
       sort_criteria: defaul_sort_criteria,
       sort_direction: defaul_sort_direction,
-      active_table: None,
-      active_table_data: None,
     ),
     emit_after(common.refresh_interval, Refresh, None),
   )
@@ -79,7 +75,7 @@ fn init(_) {
 pub opaque type Msg {
   Refresh
   HeadingClicked(api.TableSortCriteria)
-  TableClicked(api.Table)
+  // TableClicked(api.Table)
   CreatedSubject(process.Subject(Msg))
 }
 
@@ -101,16 +97,6 @@ fn update(model: Model, msg: Msg) {
       Model(..model, subject: Some(subject)),
       effect.none(),
     )
-    TableClicked(table) -> {
-      #(
-        Model(
-          ..model,
-          active_table: Some(table),
-          active_table_data: api.get_ets_data(table) |> option.from_result,
-        ),
-        effect.none(),
-      )
-    }
     HeadingClicked(criteria) -> {
       case criteria {
         c if c == model.sort_criteria -> {
@@ -140,41 +126,6 @@ fn update(model: Model, msg: Msg) {
 // VIEW ------------------------------------------------------------------------
 
 fn view(model: Model) -> Element(Msg) {
-  case model.active_table, model.active_table_data {
-    Some(table), Some(data) -> render_table_data(model, table, data)
-    _, _ -> render_table_overview(model)
-  }
-}
-
-fn render_table_data(_model: Model, table: api.Table, data: api.TableData) {
-  case data.max_length == 0 {
-    True ->
-      html.div([attribute.class("ets-table-empty")], [
-        html.text("No data in table "),
-        display.atom(table.name),
-      ])
-    False ->
-      html.table([], [
-        html.thead([], [html.tr([], render_numbered_headers(data.max_length))]),
-        html.tbody(
-          [],
-          table.map_rows(data.content, fn(row) {
-            html.tr(
-              [],
-              list.map(row, fn(cell) { html.td([], [display.inspect(cell)]) }),
-            )
-          }),
-        ),
-      ])
-  }
-}
-
-fn render_numbered_headers(count: Int) {
-  list.range(0, count - 1)
-  |> list.map(fn(i) { html.th([], [display.number(i)]) })
-}
-
-fn render_table_overview(model: Model) {
   html.table([], [
     html.thead([], [
       html.tr([], [
@@ -255,24 +206,33 @@ fn render_table_overview(model: Model) {
     html.tbody(
       [],
       table.map_rows(model.tables, fn(t) {
-        html.tr([event.on_click(TableClicked(t))], [
-          html.td([], [display.atom(t.name)]),
-          html.td([], [display.atom(t.table_type)]),
-          html.td([attribute.class("cell-right")], [
-            display.number(t.size),
-            html.text(" items"),
-          ]),
-          html.td([attribute.class("cell-right")], [
-            display.storage_words(t.memory),
-          ]),
-          html.td([attribute.class("cell-right")], [display.pid(t.owner)]),
-          html.td([attribute.class("cell-right")], [display.atom(t.protection)]),
-          html.td([attribute.class("cell-right")], [
-            display.bool(t.read_concurrency),
-          ]),
-          html.td([attribute.class("cell-right")], [
-            display.bool(t.write_concurrency),
-          ]),
+        html.tr([], [
+          html.td([], link_cell(t, [display.atom(t.name)])),
+          html.td([], link_cell(t, [display.atom(t.table_type)])),
+          html.td(
+            [attribute.class("cell-right")],
+            link_cell(t, [display.number(t.size), html.text(" items")]),
+          ),
+          html.td(
+            [attribute.class("cell-right")],
+            link_cell(t, [display.storage_words(t.memory)]),
+          ),
+          html.td(
+            [attribute.class("cell-right")],
+            link_cell(t, [display.pid(t.owner)]),
+          ),
+          html.td(
+            [attribute.class("cell-right")],
+            link_cell(t, [display.atom(t.protection)]),
+          ),
+          html.td(
+            [attribute.class("cell-right")],
+            link_cell(t, [display.bool(t.read_concurrency)]),
+          ),
+          html.td(
+            [attribute.class("cell-right")],
+            link_cell(t, [display.bool(t.write_concurrency)]),
+          ),
         ])
       }),
     ),
@@ -287,4 +247,16 @@ fn render_table_overview(model: Model) {
       ]),
     ]),
   ])
+}
+
+fn link_cell(
+  t: api.Table,
+  children: List(element.Element(Msg)),
+) -> List(element.Element(Msg)) {
+  [
+    html.a(
+      [attribute.href("/ets/" <> uri.percent_encode(atom.to_string(t.name)))],
+      children,
+    ),
+  ]
 }
