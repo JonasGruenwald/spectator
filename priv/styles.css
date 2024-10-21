@@ -7,15 +7,19 @@
 
 
 :root {
-  --text: #ffffff;
-  --background: #2f2f2f;
-  --highlight: #584355;
-  --text-hightlight: #ffaff3;
+  :root {
+    --text: #ffffff;
+    --muted: #595959;
+    --background: #2f2f2f;
+    --highlight: #584355;
+    --text-hightlight: #ffaff3;
+  }
 }
 
 @media (prefers-color-scheme: light) {
   :root {
     --text: #2f2f2f;
+    --muted: #d2d2d2;
     --background: #ffffff;
     --highlight: #fffbe8;
     --text-hightlight: #9c1788;
@@ -25,6 +29,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --text: #ffffff;
+    --muted: #595959;
     --background: #2f2f2f;
     --highlight: #584355;
     --text-hightlight: #ffaff3;
@@ -183,12 +188,12 @@ th:first-child {
   border-left: 0;
 }
 
-.buffer-row{
+.buffer-row {
   pointer-events: none;
   height: auto;
 }
 
-.buffer-row > td {
+.buffer-row>td {
   height: auto;
 }
 
@@ -208,7 +213,7 @@ th.cell-right {
   text-align: right;
 }
 
-td > a{
+td>a {
   text-decoration: none;
   color: var(--text);
   display: block;
@@ -302,4 +307,13 @@ tbody tr.tagged.selected {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+table.ets-data td {
+  border-bottom: 1px solid var(--muted);
+  user-select: text;
+}
+
+table.ets-data tbody tr:hover {
+  background: var(--background);
 }

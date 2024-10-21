@@ -68,7 +68,6 @@ fn get_initial_data(table_name_raw: String) -> Result(Model, Nil) {
   use table_atom <- result.try(
     atom.from_string(table_name) |> result.replace_error(Nil),
   )
-  io.debug(api.list_ets_tables)
   use table <- result.try(
     result.lazy_or(api.get_ets_table_info(table_atom), fn() {
       get_ets_table_info_from_list(table_atom)
@@ -128,7 +127,7 @@ fn render_table_data(_model: Model, table: api.Table, data: api.TableData) {
         display.atom(table.name),
       ])
     False ->
-      html.table([], [
+      html.table([attribute.class("ets-data")], [
         html.thead([], [html.tr([], render_numbered_headers(data.max_length))]),
         html.tbody(
           [],
