@@ -9,7 +9,6 @@ import lustre/attribute
 import lustre/effect
 import lustre/element.{type Element}
 import lustre/element/html
-import lustre/event
 import lustre/server_component
 import spectator/internal/api
 import spectator/internal/common
