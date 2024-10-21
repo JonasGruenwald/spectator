@@ -15,13 +15,15 @@ This is a work in progress, so far it has the following features:
 - Show process details
 - Show OTP process state
 - Suspend / resume OTP processes
+- List ETS tables
+- View content of ETS tables
 
 The goal is to extend it with these features in the future:
 
-- [ ] ETS table inspector
 - [ ] List of active Ports
 - [ ] Basic system statistics
 - [ ] Pretty print dynamic data into HTML for nicer state inspection
+- [ ] Inspect other Erlang nodes 
 
 ## Installation
 
