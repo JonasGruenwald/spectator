@@ -3,6 +3,7 @@ import gleam/erlang/atom
 import gleam/erlang/process
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import logging
 import lustre
 import lustre/attribute
 import lustre/effect
@@ -104,6 +105,7 @@ pub opaque type Msg {
   ProcessClicked(api.ProcessItem)
   HeadingClicked(api.InfoSortCriteria)
   OtpStateClicked(api.ProcessItem, api.SysState)
+  SystemPrimitiveClicked(api.SystemPrimitive)
 }
 
 fn do_refresh(model: Model) -> Model {
@@ -204,6 +206,31 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         }
       }
     }
+    SystemPrimitiveClicked(primitive) -> {
+      case primitive {
+        api.Process(pid) -> {
+          case api.get_info(pid) {
+            Ok(info) -> {
+              let p = api.ProcessItem(pid, info)
+              let new_model =
+                Model(
+                  ..model,
+                  active_process: Some(p),
+                  state: None,
+                  status: None,
+                )
+                |> do_refresh
+              #(new_model, request_otp_details(p.pid, model.subject))
+            }
+            Error(_) -> #(model, effect.none())
+          }
+        }
+        _ -> {
+          logging.log(logging.Warning, "System primitive click unhandled")
+          #(model, effect.none())
+        }
+      }
+    }
   }
 }
 
@@ -239,8 +266,14 @@ fn render_tag(process: api.ProcessItem) {
   }
 }
 
-fn render_primitive_list(primitives: List(api.SystemPrimitive)) {
-  list.map(primitives, display.system_primitive)
+fn render_primitive_list(
+  primitives: List(api.SystemPrimitive),
+  on_primitive_click: fn(api.SystemPrimitive) -> Msg,
+) {
+  list.map(primitives, display.system_primitive_interactive(
+    _,
+    on_primitive_click,
+  ))
   |> list.intersperse(html.text(", "))
 }
 
@@ -249,7 +282,7 @@ fn render_details(
   d: Option(api.ProcessDetails),
   status: Option(api.Status),
   state: Option(dynamic.Dynamic),
-  handle_otp_state_click: fn(api.ProcessItem, api.SysState) -> a,
+  handle_otp_state_click: fn(api.ProcessItem, api.SysState) -> Msg,
 ) {
   case p, d {
     Some(proc), Some(details) ->
@@ -290,22 +323,37 @@ fn render_details(
             ]),
             html.dl([], [
               html.dt([], [html.text("Links")]),
-              html.dd([], render_primitive_list(details.links)),
+              html.dd(
+                [],
+                render_primitive_list(details.links, SystemPrimitiveClicked),
+              ),
             ]),
             html.dl([], [
               html.dt([], [html.text("Monitored By")]),
-              html.dd([], render_primitive_list(details.monitored_by)),
+              html.dd(
+                [],
+                render_primitive_list(
+                  details.monitored_by,
+                  SystemPrimitiveClicked,
+                ),
+              ),
             ]),
             html.dl([], [
               html.dt([], [html.text("Monitors")]),
-              html.dd([], render_primitive_list(details.monitors)),
+              html.dd(
+                [],
+                render_primitive_list(details.monitors, SystemPrimitiveClicked),
+              ),
             ]),
             html.dl([], [
               html.dt([], [html.text("Parent")]),
               html.dd([], [
                 case details.parent {
                   option.None -> html.text("None")
-                  option.Some(pid) -> display.pid(pid)
+                  option.Some(pid) ->
+                    display.pid_button(pid, fn(pid) {
+                      SystemPrimitiveClicked(api.Process(pid))
+                    })
                 },
               ]),
             ]),
@@ -420,15 +468,15 @@ fn classify_selected(process: api.ProcessItem, active: Option(api.ProcessItem)) 
 
 pub fn render(
   processes: List(api.ProcessItem),
-  handle_process_click: fn(api.ProcessItem) -> a,
+  handle_process_click: fn(api.ProcessItem) -> Msg,
   active: Option(api.ProcessItem),
   details: Option(api.ProcessDetails),
   status: Option(api.Status),
   state: Option(dynamic.Dynamic),
   sort_criteria: api.InfoSortCriteria,
   sort_direction: api.SortDirection,
-  handle_heading_click: fn(api.InfoSortCriteria) -> a,
-  handle_otp_state_click: fn(api.ProcessItem, api.SysState) -> a,
+  handle_heading_click: fn(api.InfoSortCriteria) -> Msg,
+  handle_otp_state_click: fn(api.ProcessItem, api.SysState) -> Msg,
 ) {
   html.table([], [
     html.thead([], [

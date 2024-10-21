@@ -127,7 +127,7 @@ get_details(Name) ->
                     ),
                     lists:map(
                         fun classify_system_primitive/1,
-                        element(2, DetailsTuple)
+                        element(3, DetailsTuple)
                     ),
                     lists:map(
                         fun(Item) ->

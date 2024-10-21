@@ -137,6 +137,15 @@ button:hover {
   height: 3em;
 }
 
+.pid-interactive {
+  cursor: pointer;
+  background: var(--background);
+  color: var(--text);
+  text-decoration: underline;
+  border: 0;
+  padding: 0;
+}
+
 /* Table View */
 table {
   width: 100%;

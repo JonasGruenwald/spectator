@@ -6,11 +6,20 @@ import gleam/erlang/port
 import gleam/erlang/process
 import gleam/int
 import gleam/string
+import lustre/attribute
 import lustre/element/html
+import lustre/event
 import spectator/internal/api
 
 pub fn pid(pid: process.Pid) {
   html.text("PID" <> api.format_pid(pid))
+}
+
+pub fn pid_button(pid: process.Pid, on_click: fn(process.Pid) -> a) {
+  html.button(
+    [event.on_click(on_click(pid)), attribute.class("pid-interactive")],
+    [html.text("PID" <> api.format_pid(pid))],
+  )
 }
 
 pub fn port(port: port.Port) {
@@ -62,13 +71,26 @@ pub fn bool(b: Bool) {
   }
 }
 
+pub fn system_primitive_interactive(
+  primitive: api.SystemPrimitive,
+  on_click: fn(api.SystemPrimitive) -> a,
+) {
+  case primitive {
+    api.Process(p) -> pid_button(p, fn(pid) { on_click(api.Process(pid)) })
+    api.RegisteredProcess(name) -> atom(name)
+    api.Port(p) -> port(p)
+    api.RegisteredPort(name) -> atom(name)
+    api.NifResource(_) -> html.text("NIF Res")
+  }
+}
+
 pub fn system_primitive(primitive: api.SystemPrimitive) {
   case primitive {
     api.Process(p) -> pid(p)
     api.RegisteredProcess(name) -> atom(name)
     api.Port(p) -> port(p)
     api.RegisteredPort(name) -> atom(name)
-    api.NifResource(_) -> html.text("NIF Resource")
+    api.NifResource(_) -> html.text("NIF Res")
   }
 }
 

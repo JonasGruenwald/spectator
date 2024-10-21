@@ -1,13 +1,11 @@
 import gleam/erlang/atom
 import gleam/erlang/process
 import gleam/int
-import gleam/io
 import spectator
 import spectator/internal/api
 import utils/pantry
 
 fn keep_adding_to_table(ets_table: atom.Atom, count: Int) {
-  io.debug("Putting another shrimp on the barbie")
   api.ets_insert(ets_table, [#(count, "Row number " <> int.to_string(count))])
   process.sleep(1000)
   keep_adding_to_table(ets_table, count + 1)
@@ -29,6 +27,15 @@ pub fn main() {
   pantry.add_item(sub, "This actor has some state")
   pantry.add_item(sub, "Another item in the state of this actor")
   pantry.add_item(sub, "And some more state I've put into this demo actor")
+
+  // Start another OTP actor
+  let assert Ok(sub2) =
+    pantry.new()
+    |> spectator.tag_result("Registered Pantry Actor")
+  pantry.add_item(sub2, "Helllo")
+  let pid = process.subject_owner(sub2)
+  // register the actor under a name
+  register(atom.create_from_string("registered_actor"), pid)
 
   // Create an ETS table
 
@@ -54,3 +61,6 @@ pub fn main() {
   // Sleep on the main process so the program doesn't exit
   process.sleep_forever()
 }
+
+@external(erlang, "erlang", "register")
+fn register(name: atom.Atom, pid: process.Pid) -> Nil

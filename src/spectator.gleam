@@ -43,20 +43,6 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
         ["ets-feed", table] ->
           connect_server_component(req, ets_table_live.app, table)
         // Static files
-        ["lustre-server-component.mjs"] -> {
-          let assert Ok(priv) = erlang.priv_directory("lustre")
-          let path = priv <> "/static/lustre-server-component.mjs"
-          mist.send_file(path, offset: 0, limit: option.None)
-          |> result.map(fn(script) {
-            response.new(200)
-            |> response.prepend_header("content-type", "application/javascript")
-            |> response.set_body(script)
-          })
-          |> result.lazy_unwrap(fn() {
-            response.new(404)
-            |> response.set_body(mist.Bytes(bytes_builder.new()))
-          })
-        }
         ["favicon.svg"] -> {
           let assert Ok(priv) = erlang.priv_directory("spectator")
           let path = priv <> "/lucy_spectator.svg"
@@ -164,13 +150,7 @@ fn render_server_component(title: String, server_component_path path: String) {
     html([], [
       html.head([], [
         html.title([], title),
-        html.script(
-          [
-            attribute.type_("module"),
-            attribute.src("/lustre-server-component.mjs"),
-          ],
-          "",
-        ),
+        server_component.script(),
         html.link([
           attribute.rel("icon"),
           attribute.href("/favicon.svg"),
