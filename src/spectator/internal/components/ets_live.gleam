@@ -1,3 +1,4 @@
+import gleam/erlang/atom
 import gleam/erlang/process
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -7,6 +8,7 @@ import lustre/attribute
 import lustre/effect
 import lustre/element.{type Element}
 import lustre/element/html
+import lustre/event
 import lustre/server_component
 import spectator/internal/api
 import spectator/internal/common
@@ -23,10 +25,14 @@ pub fn app() {
 
 pub type Model {
   Model(
+    // Relevant for table list
     subject: Option(process.Subject(Msg)),
     tables: List(api.Table),
     sort_criteria: api.TableSortCriteria,
     sort_direction: api.SortDirection,
+    // Relevant for inspected table
+    active_table: Option(api.Table),
+    active_table_data: Option(api.TableData),
   )
 }
 
@@ -61,6 +67,8 @@ fn init(_) {
       tables: get_sorted_tables(defaul_sort_criteria, defaul_sort_direction),
       sort_criteria: defaul_sort_criteria,
       sort_direction: defaul_sort_direction,
+      active_table: None,
+      active_table_data: None,
     ),
     emit_after(common.refresh_interval, Refresh, None),
   )
@@ -71,6 +79,7 @@ fn init(_) {
 pub opaque type Msg {
   Refresh
   HeadingClicked(api.TableSortCriteria)
+  TableClicked(api.Table)
   CreatedSubject(process.Subject(Msg))
 }
 
@@ -84,8 +93,7 @@ fn update(model: Model, msg: Msg) {
     Refresh -> #(
       Model(
         ..model,
-        tables: result.unwrap(api.list_ets_tables(), [])
-          |> api.sort_table_list(model.sort_criteria, model.sort_direction),
+        tables: get_sorted_tables(model.sort_criteria, model.sort_direction),
       ),
       emit_after(common.refresh_interval, Refresh, model.subject),
     )
@@ -93,6 +101,16 @@ fn update(model: Model, msg: Msg) {
       Model(..model, subject: Some(subject)),
       effect.none(),
     )
+    TableClicked(table) -> {
+      #(
+        Model(
+          ..model,
+          active_table: Some(table),
+          active_table_data: api.get_ets_data(table) |> option.from_result,
+        ),
+        effect.none(),
+      )
+    }
     HeadingClicked(criteria) -> {
       case criteria {
         c if c == model.sort_criteria -> {
@@ -122,6 +140,41 @@ fn update(model: Model, msg: Msg) {
 // VIEW ------------------------------------------------------------------------
 
 fn view(model: Model) -> Element(Msg) {
+  case model.active_table, model.active_table_data {
+    Some(table), Some(data) -> render_table_data(model, table, data)
+    _, _ -> render_table_overview(model)
+  }
+}
+
+fn render_table_data(_model: Model, table: api.Table, data: api.TableData) {
+  case data.max_length == 0 {
+    True ->
+      html.div([attribute.class("ets-table-empty")], [
+        html.text("No data in table "),
+        display.atom(table.name),
+      ])
+    False ->
+      html.table([], [
+        html.thead([], [html.tr([], render_numbered_headers(data.max_length))]),
+        html.tbody(
+          [],
+          table.map_rows(data.content, fn(row) {
+            html.tr(
+              [],
+              list.map(row, fn(cell) { html.td([], [display.inspect(cell)]) }),
+            )
+          }),
+        ),
+      ])
+  }
+}
+
+fn render_numbered_headers(count: Int) {
+  list.range(0, count - 1)
+  |> list.map(fn(i) { html.th([], [display.number(i)]) })
+}
+
+fn render_table_overview(model: Model) {
   html.table([], [
     html.thead([], [
       html.tr([], [
@@ -201,8 +254,8 @@ fn view(model: Model) -> Element(Msg) {
     ]),
     html.tbody(
       [],
-      list.map(model.tables, fn(t) {
-        html.tr([], [
+      table.map_rows(model.tables, fn(t) {
+        html.tr([event.on_click(TableClicked(t))], [
           html.td([], [display.atom(t.name)]),
           html.td([], [display.atom(t.table_type)]),
           html.td([attribute.class("cell-right")], [

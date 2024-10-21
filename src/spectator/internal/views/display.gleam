@@ -1,4 +1,5 @@
 /// View functions for displaying all kinds of data from the system
+import gleam/dynamic
 import gleam/erlang
 import gleam/erlang/atom
 import gleam/erlang/port
@@ -14,6 +15,10 @@ pub fn pid(pid: process.Pid) {
 
 pub fn port(port: port.Port) {
   html.text(api.format_port(port))
+}
+
+pub fn inspect(d: dynamic.Dynamic) {
+  html.text(string.inspect(d))
 }
 
 pub fn atom(a: atom.Atom) {

@@ -500,7 +500,7 @@ pub fn render(
     ]),
     html.tbody(
       [],
-      list.map(processes, fn(process) {
+      table.map_rows(processes, fn(process) {
         html.tr(
           [
             attribute.role("button"),

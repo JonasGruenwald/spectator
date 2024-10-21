@@ -11,6 +11,9 @@ import gleam/order
 import gleam/result
 import gleam/string
 
+// A tuple from Erlang that could be any size
+pub type OpaqueTuple
+
 pub type SysState {
   Running
   Suspended
@@ -28,6 +31,10 @@ pub type Table {
     read_concurrency: Bool,
     write_concurrency: Bool,
   )
+}
+
+pub type TableData {
+  TableData(content: List(List(dynamic.Dynamic)), max_length: Int)
 }
 
 pub type SystemPrimitive {
@@ -320,6 +327,34 @@ pub fn sort_table_list(
   }
 }
 
+pub fn get_ets_data(table: Table) {
+  use raw_data <- result.try(get_raw_ets_data(table.name))
+  process_raw_ets_data(raw_data, [], 0)
+}
+
+fn process_raw_ets_data(
+  remainder: List(List(OpaqueTuple)),
+  accumulator: List(List(dynamic.Dynamic)),
+  max_length: Int,
+) -> Result(TableData, Nil) {
+  case remainder {
+    [] -> {
+      Ok(TableData(content: accumulator, max_length: max_length))
+    }
+    [[tup], ..rest] -> {
+      let converted = opaque_tuple_to_list(tup)
+      process_raw_ets_data(
+        rest,
+        [converted, ..accumulator],
+        int.max(max_length, list.length(converted)),
+      )
+    }
+    _ -> {
+      Error(Nil)
+    }
+  }
+}
+
 // Direct bindings to Erlang APIs
 
 @external(erlang, "sys", "suspend")
@@ -372,9 +407,12 @@ pub fn list_ets_tables() -> Result(List(Table), Nil)
 pub fn new_ets_table(name: atom.Atom) -> Result(atom.Atom, Nil)
 
 @external(erlang, "spectator_ffi", "get_ets_data")
-pub fn get_ets_data(
+pub fn get_raw_ets_data(
   table: atom.Atom,
-) -> Result(List(List(#(dynamic.Dynamic, dynamic.Dynamic))), Nil)
+) -> Result(List(List(OpaqueTuple)), Nil)
+
+@external(erlang, "spectator_ffi", "opaque_tuple_to_list")
+pub fn opaque_tuple_to_list(tuple: OpaqueTuple) -> List(dynamic.Dynamic)
 
 @external(erlang, "spectator_ffi", "get_word_size")
 pub fn get_word_size() -> Int

@@ -155,11 +155,10 @@ pub fn ets_test() {
   |> list.find(fn(t) { t.name == table_name })
   |> should.be_ok
 
-  api.get_ets_data(table_name)
+  api.get_raw_ets_data(table_name)
   |> should.be_ok
   |> list.first
   |> should.be_ok
   |> list.first
   |> should.be_ok
-  |> should.equal(#(dynamic.from("hello"), dynamic.from("joe")))
 }
