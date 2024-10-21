@@ -1,5 +1,6 @@
 import gleam/erlang/atom
 import gleam/erlang/process
+import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
@@ -29,6 +30,8 @@ pub type Model {
     subject: Option(process.Subject(Msg)),
     table: Option(api.Table),
     table_data: Option(api.TableData),
+    sort_column: Option(Int),
+    sort_direction: api.SortDirection,
   )
 }
 
@@ -73,13 +76,19 @@ fn get_initial_data(table_name_raw: String) -> Result(Model, Nil) {
     }),
   )
   let table_data = api.get_ets_data(table) |> option.from_result
-  Ok(Model(subject: None, table: Some(table), table_data: table_data))
+  Ok(Model(
+    subject: None,
+    table: Some(table),
+    table_data: table_data,
+    sort_column: None,
+    sort_direction: api.Descending,
+  ))
 }
 
 fn init(table_name_raw: String) {
   case get_initial_data(table_name_raw) {
     Ok(model) -> #(model, emit_after(common.refresh_interval, Refresh, None))
-    Error(_) -> #(Model(None, None, None), effect.none())
+    Error(_) -> #(Model(None, None, None, None, api.Descending), effect.none())
   }
 }
 
@@ -88,24 +97,56 @@ fn init(table_name_raw: String) {
 pub opaque type Msg {
   Refresh
   CreatedSubject(process.Subject(Msg))
+  HeadingClicked(Option(Int))
+}
+
+fn do_refresh(model: Model) -> Model {
+  case model.table {
+    Some(t) -> {
+      case api.get_ets_data(t), model.sort_column {
+        Ok(data), Some(sort_column_index) -> {
+          // see it, say it,
+          let sorted =
+            api.sort_table_data(data, sort_column_index, model.sort_direction)
+
+          Model(..model, table_data: Some(sorted))
+        }
+        Ok(data), None -> Model(..model, table_data: Some(data))
+        Error(_), _ -> Model(None, None, None, None, api.Descending)
+      }
+    }
+    _ -> model
+  }
 }
 
 fn update(model: Model, msg: Msg) {
   case msg {
-    Refresh ->
-      case model.table {
-        Some(t) -> {
-          #(
-            Model(..model, table_data: option.from_result(api.get_ets_data(t))),
-            emit_after(common.refresh_interval, Refresh, model.subject),
-          )
-        }
-        _ -> #(model, effect.none())
-      }
+    Refresh -> #(
+      do_refresh(model),
+      emit_after(common.refresh_interval, Refresh, None),
+    )
+
     CreatedSubject(subject) -> #(
       Model(..model, subject: Some(subject)),
       effect.none(),
     )
+    HeadingClicked(column) -> {
+      case column {
+        _c if column == model.sort_column -> {
+          #(
+            Model(
+              ..model,
+              sort_direction: api.invert_sort_direction(model.sort_direction),
+            )
+              |> do_refresh,
+            effect.none(),
+          )
+        }
+        c -> {
+          #(Model(..model, sort_column: c) |> do_refresh, effect.none())
+        }
+      }
+    }
   }
 }
 
@@ -118,7 +159,7 @@ fn view(model: Model) -> Element(Msg) {
   }
 }
 
-fn render_table_data(_model: Model, table: api.Table, data: api.TableData) {
+fn render_table_data(model: Model, table: api.Table, data: api.TableData) {
   case data.max_length == 0 {
     True ->
       html.div([attribute.class("ets-table-error")], [
@@ -127,23 +168,34 @@ fn render_table_data(_model: Model, table: api.Table, data: api.TableData) {
       ])
     False ->
       html.table([attribute.class("ets-data")], [
-        html.thead([], [html.tr([], render_numbered_headers(data.max_length))]),
+        html.thead([], [
+          html.tr(
+            [],
+            list.range(0, data.max_length - 1)
+              |> list.map(fn(i) {
+                table.heading(
+                  int.to_string(i),
+                  int.to_string(i),
+                  Some(i),
+                  model.sort_column,
+                  model.sort_direction,
+                  HeadingClicked,
+                  False,
+                )
+              }),
+          ),
+        ]),
         html.tbody(
           [],
           table.map_rows(data.content, fn(row) {
             html.tr(
-              [],
+              [attribute.class("ets-row")],
               list.map(row, fn(cell) { html.td([], [display.inspect(cell)]) }),
             )
           }),
         ),
       ])
   }
-}
-
-fn render_numbered_headers(count: Int) {
-  list.range(0, count - 1)
-  |> list.map(fn(i) { html.th([], [display.number(i)]) })
 }
 
 fn render_not_found() {

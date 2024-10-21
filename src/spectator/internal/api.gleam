@@ -260,6 +260,45 @@ pub fn sort_info_list(
   }
 }
 
+fn disgustingly_index_into_list_at(
+  in list: List(a),
+  get index: Int,
+) -> Result(a, Nil) {
+  case index >= 0 {
+    True ->
+      list
+      |> list.drop(index)
+      |> list.first
+    False -> Error(Nil)
+  }
+}
+
+pub fn sort_table_data(
+  input: TableData,
+  sort_column: Int,
+  sort_direction: SortDirection,
+) -> TableData {
+  // see it, say it,
+  let sorted =
+    list.sort(input.content, fn(a, b) {
+      // Ok, but why?
+      // Tables can have a variable number of columns, so we have to use lists
+      // I still want to be able to sort by column index, so I have to index into the list
+      let a_cell = disgustingly_index_into_list_at(a, sort_column)
+      let b_cell = disgustingly_index_into_list_at(b, sort_column)
+      case a_cell, b_cell {
+        Ok(a), Ok(b) ->
+          string.compare(string.inspect(a), string.inspect(b))
+          |> apply_direction(sort_direction)
+        Ok(_a), Error(_b) -> order.Gt |> apply_direction(sort_direction)
+        Error(_a), Ok(_b) -> order.Lt
+        Error(_), Error(_) -> order.Eq |> apply_direction(sort_direction)
+      }
+    })
+
+  TableData(..input, content: sorted)
+}
+
 pub fn sort_table_list(
   input: List(Table),
   criteria: TableSortCriteria,
