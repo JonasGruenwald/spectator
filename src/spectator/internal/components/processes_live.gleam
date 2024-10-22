@@ -32,7 +32,7 @@ pub type Model {
     sort_direction: api.SortDirection,
     active_process: Option(api.ProcessItem),
     details: Option(api.ProcessDetails),
-    status: Option(api.Status),
+    status: Option(api.ProcessOtpStatus),
     state: Option(dynamic.Dynamic),
   )
 }
@@ -269,7 +269,7 @@ fn render_primitive_list(
 fn render_details(
   p: Option(api.ProcessItem),
   d: Option(api.ProcessDetails),
-  status: Option(api.Status),
+  status: Option(api.ProcessOtpStatus),
   state: Option(dynamic.Dynamic),
   handle_otp_state_click: fn(api.ProcessItem, api.SysState) -> Msg,
 ) {
@@ -449,7 +449,7 @@ pub fn render(
   handle_process_click: fn(api.ProcessItem) -> Msg,
   active: Option(api.ProcessItem),
   details: Option(api.ProcessDetails),
-  status: Option(api.Status),
+  status: Option(api.ProcessOtpStatus),
   state: Option(dynamic.Dynamic),
   sort_criteria: api.ProcessSortCriteria,
   sort_direction: api.SortDirection,

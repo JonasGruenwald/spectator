@@ -67,9 +67,12 @@ pub type TableData {
   )
 }
 
-// FIXME: needs a better name
-pub type Status {
-  Status(
+/// Box for data returned by the `sys:get_status` function.
+/// https://www.erlang.org/doc/apps/stdlib/sys.html#get_status/2
+/// Data is a bit tricky to extract, so we keep a remaining untyped
+/// list of status_items, which could potentially be pretty printed.
+pub type ProcessOtpStatus {
+  ProcessOtpStatus(
     pid: process.Pid,
     module: atom.Atom,
     parent: process.Pid,
@@ -80,7 +83,7 @@ pub type Status {
 
 /// A box for the details retuned for an OTP-compatible process 
 pub type OtpDetails {
-  OtpDetails(pid: process.Pid, status: Status, state: dynamic.Dynamic)
+  OtpDetails(pid: process.Pid, status: ProcessOtpStatus, state: dynamic.Dynamic)
 }
 
 /// An inspected process with detailed information,
@@ -398,7 +401,7 @@ pub fn request_otp_data(p: process.Pid, callback: fn(OtpDetails) -> Nil) {
 pub fn get_status(
   pid: process.Pid,
   timeout: Int,
-) -> Result(Status, dynamic.Dynamic)
+) -> Result(ProcessOtpStatus, dynamic.Dynamic)
 
 @external(erlang, "spectator_ffi", "get_state")
 pub fn get_state(
