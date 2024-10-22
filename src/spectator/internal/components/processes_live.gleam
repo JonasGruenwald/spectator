@@ -76,7 +76,7 @@ fn request_otp_details(
 }
 
 fn init(_) -> #(Model, effect.Effect(Msg)) {
-  let info = api.get_info_list()
+  let info = api.get_process_list()
   let default_sort_criteria = api.SortByReductions
   let default_sort_direction = api.Descending
   let sorted =
@@ -109,14 +109,14 @@ pub opaque type Msg {
 }
 
 fn do_refresh(model: Model) -> Model {
-  let info = api.get_info_list()
+  let info = api.get_process_list()
   let sorted =
     api.sort_process_list(info, model.sort_criteria, model.sort_direction)
 
   let active_process = case model.active_process {
     None -> None
     Some(active_process) -> {
-      case api.get_info(active_process.pid) {
+      case api.get_process_info(active_process.pid) {
         Ok(info) -> Some(api.ProcessItem(active_process.pid, info))
         Error(_) -> None
       }
@@ -209,7 +209,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       }
     }
     PidClicked(pid) -> {
-      case api.get_info(pid) {
+      case api.get_process_info(pid) {
         Ok(info) -> {
           let p = api.ProcessItem(pid, info)
           let new_model =

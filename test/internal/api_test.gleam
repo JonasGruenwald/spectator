@@ -76,14 +76,14 @@ pub fn get_state_failure_test() {
 
 pub fn get_info_test() {
   let info =
-    api.get_info(process.self())
+    api.get_process_info(process.self())
     |> should.be_ok
 
   info.current_function.0
   |> should.equal(atom.create_from_string("spectator_ffi"))
 
   info.current_function.1
-  |> should.equal(atom.create_from_string("get_info"))
+  |> should.equal(atom.create_from_string("get_process_info"))
 
   info.current_function.2
   |> should.equal(1)

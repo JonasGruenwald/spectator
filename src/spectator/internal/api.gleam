@@ -60,9 +60,10 @@ pub type Table {
 pub type TableData {
   TableData(
     /// Each entry in the content list is a row in the table.
-    /// Typically, all rows will have the same number of columns, but this is not guaranteed.
+    /// Typically, all rows will have the same number of columns, but this is not guaranteed,
+    /// therefore each row is again a list of dynamic data.
     content: List(List(dynamic.Dynamic)),
-    /// The row is a list of dynamic data, each item is a column in the table.
+    /// The maximum number of columns in any row.
     max_length: Int,
   )
 }
@@ -89,7 +90,23 @@ pub type OtpDetails {
 /// An inspected process with detailed information,
 /// boxed together with the process pid.
 pub type ProcessItem {
-  ProcessItem(pid: process.Pid, info: Info)
+  ProcessItem(pid: process.Pid, info: ProcessInfo)
+}
+
+/// Information about a process, as returned by `process_info/2`
+pub type ProcessInfo {
+  ProcessInfo(
+    /// tuple of module, function, and arity.
+    current_function: #(atom.Atom, atom.Atom, Int),
+    /// tuple of module, function, and arity.
+    initial_call: #(atom.Atom, atom.Atom, Int),
+    registered_name: option.Option(atom.Atom),
+    memory: Int,
+    message_queue_len: Int,
+    reductions: Int,
+    tag: option.Option(String),
+    status: atom.Atom,
+  )
 }
 
 /// Detailed information about a process
@@ -104,7 +121,32 @@ pub type ProcessDetails {
   )
 }
 
-/// The criteria by which to sort processes
+pub type PortItem {
+  PortItem(port_id: port.Port, info: PortInfo)
+}
+
+pub type PortInfo {
+  PortInfo(
+    command_name: String,
+    registered_name: Option(atom.Atom),
+    connected_process: process.Pid,
+    os_pid: Option(Int),
+    input: Int,
+    output: Int,
+    memory: Int,
+    queue_size: Int,
+  )
+}
+
+pub type PortDetails {
+  PortDetails(
+    links: List(SystemPrimitive),
+    monitored_by: List(SystemPrimitive),
+    monitors: List(SystemPrimitive),
+  )
+}
+
+/// The criteria by which to sort the list of processes
 pub type ProcessSortCriteria {
   SortByProcessName
   SortByTag
@@ -115,6 +157,7 @@ pub type ProcessSortCriteria {
   SortByProcessStatus
 }
 
+/// The criteria by which to sort the list of ETS tables
 pub type TableSortCriteria {
   SortByTableId
   SortByTableName
@@ -130,21 +173,6 @@ pub type TableSortCriteria {
 pub type SortDirection {
   Ascending
   Descending
-}
-
-pub type Info {
-  Info(
-    /// tuple of module, function, and arity.
-    current_function: #(atom.Atom, atom.Atom, Int),
-    /// tuple of module, function, and arity.
-    initial_call: #(atom.Atom, atom.Atom, Int),
-    registered_name: option.Option(atom.Atom),
-    memory: Int,
-    message_queue_len: Int,
-    reductions: Int,
-    tag: option.Option(String),
-    status: atom.Atom,
-  )
 }
 
 // ------ SORTING
@@ -355,10 +383,10 @@ pub fn sort_table_list(
 
 // -------[PROCESS LIST]
 
-pub fn get_info_list() -> List(ProcessItem) {
+pub fn get_process_list() -> List(ProcessItem) {
   list_processes()
   |> list.filter_map(fn(pid) {
-    case get_info(pid) {
+    case get_process_info(pid) {
       Error(e) -> Error(e)
       Ok(info) -> Ok(ProcessItem(pid, info))
     }
@@ -368,8 +396,10 @@ pub fn get_info_list() -> List(ProcessItem) {
 @external(erlang, "erlang", "processes")
 pub fn list_processes() -> List(process.Pid)
 
-@external(erlang, "spectator_ffi", "get_info")
-pub fn get_info(pid: process.Pid) -> Result(Info, dynamic.Dynamic)
+@external(erlang, "spectator_ffi", "get_process_info")
+pub fn get_process_info(
+  pid: process.Pid,
+) -> Result(ProcessInfo, dynamic.Dynamic)
 
 // -------[PROCESS DETAILS]
 
@@ -452,6 +482,27 @@ pub fn get_raw_ets_data(
 
 @external(erlang, "spectator_ffi", "opaque_tuple_to_list")
 pub fn opaque_tuple_to_list(tuple: OpaqueTuple) -> List(dynamic.Dynamic)
+
+// -------[PORTS]
+
+pub fn get_port_list() -> List(PortItem) {
+  list_ports()
+  |> list.filter_map(fn(pid) {
+    case get_port_info(pid) {
+      Error(e) -> Error(e)
+      Ok(info) -> Ok(PortItem(pid, info))
+    }
+  })
+}
+
+@external(erlang, "erlang", "ports")
+pub fn list_ports() -> List(port.Port)
+
+@external(erlang, "spectator_ffi", "get_port_info")
+pub fn get_port_info(port: port.Port) -> Result(PortInfo, dynamic.Dynamic)
+
+@external(erlang, "spectator_ffi", "get_port_details")
+pub fn get_port_details(port: port.Port) -> Result(PortDetails, dynamic.Dynamic)
 
 // ------ FORMATTING
 

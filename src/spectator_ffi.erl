@@ -2,7 +2,7 @@
 -export([
     get_status/2,
     get_state/2,
-    get_info/1,
+    get_process_info/1,
     format_pid/1,
     get_details/1,
     format_port/1,
@@ -12,7 +12,9 @@
     get_word_size/0,
     opaque_tuple_to_list/1,
     get_ets_table_info/1,
-    compare_data/2
+    compare_data/2,
+    get_port_info/1,
+    get_port_details/1
 ]).
 
 % Get the status of an OTP-compatible process or return an error
@@ -47,7 +49,7 @@ extract_sysstate_and_parent([H | T], SysState, Parent) ->
     end.
 
 % Get the info of a regular process for display in a list
-get_info(Name) ->
+get_process_info(Name) ->
     ItemList = [
         current_function,
         initial_call,
@@ -69,7 +71,7 @@ get_info(Name) ->
                 InfoTuple = list_to_tuple(Values),
                 InfoNormalized = {
                     % Prefix to turn into Info() type
-                    info,
+                    process_info,
                     element(1, InfoTuple),
                     element(2, InfoTuple),
                     % Convert registered name to option type
@@ -85,6 +87,47 @@ get_info(Name) ->
                 },
                 {ok, InfoNormalized}
         end
+    catch
+        _:Reason -> {error, Reason}
+    end.
+
+% Get the info of a port for display in a list
+get_port_info(Port) ->
+    try
+        % TODO would be nice to check if any of these are undefined first
+        {ok,
+            {port_info, list_to_bitstring(element(2, erlang:port_info(Port, name))),
+                to_option(erlang:port_info(Port, registered_name)),
+                element(2, erlang:port_info(Port, connected)),
+                element(2, erlang:port_info(Port, os_pid)),
+                element(2, erlang:port_info(Port, input)),
+                element(2, erlang:port_info(Port, output)),
+                element(2, erlang:port_info(Port, memory)),
+                element(2, erlang:port_info(Port, queue_size))}}
+    catch
+        _:Reason -> {error, Reason}
+    end.
+
+get_port_details(Port) ->
+    try
+        % TODO would be nice to check if any of these are undefined first
+        {ok,
+            {port_details,
+                % Links -> we normalize into SystemPrimitive()
+                lists:map(
+                    fun classify_system_primitive/1,
+                    element(2, erlang:port_info(Port, links))
+                ),
+                % Monitored By -> we normalize into SystemPrimitive()
+                lists:map(
+                    fun classify_system_primitive/1,
+                    element(2, erlang:port_info(Port, monitored_by))
+                ),
+                % Monitors -> we normalize into SystemPrimitive()
+                lists:map(
+                    fun classify_system_primitive/1,
+                    element(2, erlang:port_info(Port, monitors))
+                )}}
     catch
         _:Reason -> {error, Reason}
     end.
@@ -174,15 +217,21 @@ get_details(Name) ->
                                 {process, {RegName, Node}} when Node == node() ->
                                     case whereis(RegName) of
                                         % If the PID lookup fails, we filter this process out
-                                        undefined -> false;
-                                        Pid -> {true, {process_primitive, Pid, {some, RegName}, spectator_tag_manager:get_tag(Pid)}}
+                                        undefined ->
+                                            false;
+                                        Pid ->
+                                            {true,
+                                                {process_primitive, Pid, {some, RegName},
+                                                    spectator_tag_manager:get_tag(Pid)}}
                                     end;
                                 %  Remote process monitored by name
                                 {process, {RegName, Node}} ->
                                     {true, {remote_process_primitive, RegName, Node}};
                                 % Local process monitored by pid
                                 {process, Pid} ->
-                                    {true, {process_primitive, Pid, get_process_name_option(Pid), spectator_tag_manager:get_tag(Pid)}};
+                                    {true,
+                                        {process_primitive, Pid, get_process_name_option(Pid),
+                                            spectator_tag_manager:get_tag(Pid)}};
                                 % Port monitored by name
                                 % (Node is always the local node, it's a legacy field)
                                 {port, {RegName, _Node}} ->
@@ -221,6 +270,7 @@ format_port(Port) ->
     list_to_bitstring(port_to_list(Port)).
 
 build_table_info(Table) ->
+    % TODO would be nice to check if any of these are undefined first
     {table, ets:info(Table, id), ets:info(Table, name), ets:info(Table, type),
         ets:info(Table, size), ets:info(Table, memory), ets:info(Table, owner),
         ets:info(Table, protection), ets:info(Table, read_concurrency),
@@ -277,6 +327,9 @@ new_ets_table(Name) ->
 get_word_size() ->
     erlang:system_info(wordsize).
 
-% into_gleam_type(Proplist, ConstructorName, OrderedKeys) ->
-%     Values = lists:map(fun(Key) -> proplists:get_value(Key, Proplist) end, OrderedKeys),
-%     list_to_tuple([ConstructorName | Values]).
+to_option(Input) ->
+    case Input of
+        [] -> none;
+        undefined -> none;
+        Value -> {some, Value}
+    end.
