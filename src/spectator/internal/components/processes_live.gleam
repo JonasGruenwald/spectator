@@ -278,38 +278,32 @@ fn render_details(
       html.div([attribute.class("details")], [
         html.div([attribute.class("general")], [
           html.div([attribute.class("panel-heading")], [
-            case proc.info.tag {
-              Some("__spectator_internal " <> rest) ->
+            case proc.info.tag, proc.info.registered_name {
+              Some("__spectator_internal " <> rest), _ ->
                 html.text("🔍 Spectator " <> rest)
-              Some(tag) -> html.text("🔖 " <> tag <> " details")
-              None -> html.text("🎛️ Process Details")
+              Some(tag), None ->
+                html.text("🔖 " <> api.format_pid(proc.pid) <> " " <> tag)
+              Some(tag), Some(name) ->
+                html.text(
+                  "🔖 "
+                  <> api.format_pid(proc.pid)
+                  <> " "
+                  <> tag
+                  <> " registered as "
+                  <> atom.to_string(name),
+                )
+              None, None ->
+                html.text("🎛️ " <> api.format_pid(proc.pid) <> " Process")
+              None, Some(name) ->
+                html.text(
+                  "📠 "
+                  <> api.format_pid(proc.pid)
+                  <> " "
+                  <> atom.to_string(name),
+                )
             },
           ]),
           html.div([attribute.class("panel-content")], [
-            html.dl([], [
-              html.dt([], [html.text("Process Id")]),
-              html.dd([], [display.pid(proc.pid)]),
-            ]),
-            case proc.info.tag {
-              option.None -> html.text("")
-              option.Some(tag) ->
-                html.dl([], [
-                  html.dt([], [html.text("Tag")]),
-                  html.dd([], [html.text(tag)]),
-                ])
-            },
-            case proc.info.registered_name {
-              option.None -> html.text("")
-              option.Some(name) ->
-                html.dl([], [
-                  html.dt([], [html.text("Registered Name")]),
-                  html.dd([], [html.text(atom.to_string(name))]),
-                ])
-            },
-            html.dl([], [
-              html.dt([], [html.text("Status")]),
-              html.dd([], [html.text(atom.to_string(proc.info.status))]),
-            ]),
             html.dl([], [
               html.dt([], [html.text("Links")]),
               html.dd([], render_primitive_list(details.links, PidClicked)),
@@ -334,6 +328,10 @@ fn render_details(
                     display.system_primitive_interactive(parent, PidClicked)
                 },
               ]),
+            ]),
+            html.dl([], [
+              html.dt([], [html.text("Status")]),
+              html.dd([], [html.text(atom.to_string(proc.info.status))]),
             ]),
             html.dl([], [
               html.dt([], [html.text("Trap Exit")]),

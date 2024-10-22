@@ -1,5 +1,5 @@
 name = "spectator"
-version = "1.1.4"
+version = "1.1.5"
 description = "BEAM observer tool"
 licences = ["MIT"]
 repository = { type = "github", user = "JonasGruenwald", repo = "spectator" }

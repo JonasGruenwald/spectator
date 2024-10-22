@@ -13,7 +13,7 @@ import lustre/event
 import spectator/internal/api
 
 pub fn pid(pid: process.Pid) {
-  html.text("PID" <> api.format_pid(pid))
+  html.text(api.format_pid(pid))
 }
 
 pub fn pid_button(
