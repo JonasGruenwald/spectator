@@ -22,7 +22,7 @@
     --muted: #d2d2d2;
     --background: #ffffff;
     --highlight: #fffbe8;
-    --text-hightlight: #9c1788;
+    --text-hightlight: rgb(171, 98, 160);
   }
 }
 
