@@ -14,7 +14,11 @@
     get_ets_table_info/1,
     compare_data/2,
     get_port_info/1,
-    get_port_details/1
+    get_port_details/1,
+    pid_to_string/1,
+    port_to_string/1,
+    pid_from_string/1,
+    port_from_string/1
 ]).
 
 % Get the status of an OTP-compatible process or return an error
@@ -99,7 +103,7 @@ get_port_info(Port) ->
             {port_info, list_to_bitstring(element(2, erlang:port_info(Port, name))),
                 to_option(erlang:port_info(Port, registered_name)),
                 element(2, erlang:port_info(Port, connected)),
-                element(2, erlang:port_info(Port, os_pid)),
+                to_option(element(2, erlang:port_info(Port, os_pid))),
                 element(2, erlang:port_info(Port, input)),
                 element(2, erlang:port_info(Port, output)),
                 element(2, erlang:port_info(Port, memory)),
@@ -320,6 +324,26 @@ new_ets_table(Name) ->
             ets:new(Name, [
                 named_table, public
             ])}
+    catch
+        error:badarg -> {error, nil}
+    end.
+
+pid_to_string(Pid) ->
+    list_to_bitstring(pid_to_list(Pid)).
+
+port_to_string(Port) ->
+    list_to_bitstring(port_to_list(Port)).
+
+pid_from_string(String) ->
+    try
+        {ok, list_to_pid(bitstring_to_list(String))}
+    catch
+        error:badarg -> {error, nil}
+    end.
+
+port_from_string(String) ->
+    try
+        {ok, list_to_port(bitstring_to_list(String))}
     catch
         error:badarg -> {error, nil}
     end.

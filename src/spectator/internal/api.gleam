@@ -10,6 +10,7 @@ import gleam/option.{type Option, None, Some}
 import gleam/order
 import gleam/result
 import gleam/string
+import gleam/uri
 
 /// A tuple from Erlang that could be any size.
 /// Used to represent ETS table data as it is not guaranteed to have a uniform number of columns.
@@ -168,6 +169,17 @@ pub type TableSortCriteria {
   SortByTableProtection
   SortByTableReadConcurrency
   SortByTableWriteConcurrency
+}
+
+pub type PortSortCriteria {
+  SortByPortName
+  SortByPortCommand
+  SortByPortConnectedProcess
+  SortByPortOsPid
+  SortByPortInput
+  SortByPortOutput
+  SortByPortMemory
+  SortByPortQueueSize
 }
 
 pub type SortDirection {
@@ -379,6 +391,73 @@ pub fn sort_table_list(
   }
 }
 
+pub fn sort_port_list(
+  input: List(PortItem),
+  criteria: PortSortCriteria,
+  direction: SortDirection,
+) -> List(PortItem) {
+  case criteria {
+    SortByPortName -> {
+      list.sort(input, fn(a, b) {
+        case a.info.registered_name, b.info.registered_name {
+          Some(a), Some(b) ->
+            string.compare(atom.to_string(a), atom.to_string(b))
+          Some(_), None -> order.Gt
+          None, Some(_) -> order.Lt
+          None, None -> order.Eq
+        }
+      })
+    }
+    SortByPortCommand -> {
+      list.sort(input, fn(a, b) {
+        string.compare(a.info.command_name, b.info.command_name)
+        |> apply_direction(direction)
+      })
+    }
+    SortByPortConnectedProcess -> {
+      list.sort(input, fn(a, b) {
+        string.compare(
+          string.inspect(a.info.connected_process),
+          string.inspect(b.info.connected_process),
+        )
+        |> apply_direction(direction)
+      })
+    }
+    SortByPortOsPid -> {
+      list.sort(input, fn(a, b) {
+        case a.info.os_pid, b.info.os_pid {
+          Some(a), Some(b) -> int.compare(a, b)
+          Some(_), None -> order.Gt
+          None, Some(_) -> order.Lt
+          None, None -> order.Eq
+        }
+        |> apply_direction(direction)
+      })
+    }
+    SortByPortInput -> {
+      list.sort(input, fn(a, b) {
+        int.compare(a.info.input, b.info.input) |> apply_direction(direction)
+      })
+    }
+    SortByPortOutput -> {
+      list.sort(input, fn(a, b) {
+        int.compare(a.info.output, b.info.output) |> apply_direction(direction)
+      })
+    }
+    SortByPortMemory -> {
+      list.sort(input, fn(a, b) {
+        int.compare(a.info.memory, b.info.memory) |> apply_direction(direction)
+      })
+    }
+    SortByPortQueueSize -> {
+      list.sort(input, fn(a, b) {
+        int.compare(a.info.queue_size, b.info.queue_size)
+        |> apply_direction(direction)
+      })
+    }
+  }
+}
+
 // ------ DATA FETCHING AND PROCESSING
 
 // -------[PROCESS LIST]
@@ -529,6 +608,38 @@ pub fn ets_insert(table: atom.Atom, tuple: List(#(k, v))) -> Nil
 
 @external(erlang, "spectator_ffi", "new_ets_table")
 pub fn new_ets_table(name: atom.Atom) -> Result(atom.Atom, Nil)
+
+@external(erlang, "spectator_ffi", "pid_to_string")
+fn pid_to_string(pid: process.Pid) -> String
+
+pub fn serialize_pid(pid: process.Pid) -> String {
+  pid_to_string(pid)
+  |> uri.percent_encode
+}
+
+@external(erlang, "spectator_ffi", "port_to_string")
+fn port_to_string(port: port.Port) -> String
+
+pub fn serialize_port(port: port.Port) -> String {
+  port_to_string(port)
+  |> uri.percent_encode
+}
+
+@external(erlang, "spectator_ffi", "pid_from_string")
+fn pid_from_string(string: String) -> Result(process.Pid, Nil)
+
+pub fn decode_pid(string: String) -> Result(process.Pid, Nil) {
+  use decoded <- result.try(uri.percent_decode(string))
+  pid_from_string(decoded)
+}
+
+@external(erlang, "spectator_ffi", "port_from_string")
+fn port_from_string(string: String) -> Result(port.Port, Nil)
+
+pub fn decode_port(string: String) -> Result(port.Port, Nil) {
+  use decoded <- result.try(uri.percent_decode(string))
+  port_from_string(decoded)
+}
 
 // ------- SYSTEM INFORMATION
 

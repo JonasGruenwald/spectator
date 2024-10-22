@@ -1,4 +1,5 @@
 import gleam/bytes_builder
+import gleam/dynamic
 import gleam/erlang
 import gleam/erlang/process
 import gleam/http
@@ -21,6 +22,7 @@ import spectator/internal/api
 import spectator/internal/common
 import spectator/internal/components/ets_overview_live
 import spectator/internal/components/ets_table_live
+import spectator/internal/components/ports_live
 import spectator/internal/components/processes_live
 import spectator/internal/views/navbar
 
@@ -35,6 +37,7 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
         ["processes"] -> render_server_component("Processes", "process-feed")
         ["ets"] -> render_server_component("ETS", "ets-feed")
         ["ets", table] -> render_server_component("ETS", "ets-feed/" <> table)
+        ["ports"] -> render_server_component("Ports", "port-feed")
         // WebSocket Routes
         ["process-feed"] ->
           connect_server_component(req, processes_live.app, Nil)
@@ -42,6 +45,7 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
           connect_server_component(req, ets_overview_live.app, Nil)
         ["ets-feed", table] ->
           connect_server_component(req, ets_table_live.app, table)
+        ["port-feed"] -> connect_server_component(req, ports_live.app, Nil)
         // Static files
         ["favicon.svg"] -> {
           let assert Ok(priv) = erlang.priv_directory("spectator")
@@ -104,7 +108,7 @@ pub fn start() {
   start_on(3000)
 }
 
-pub fn start_on(port: Int) {
+pub fn start_on(port: Int) -> Result(process.Pid, dynamic.Dynamic) {
   sup.new(sup.OneForOne)
   |> sup.add(sup.worker_child("Spectator Tag Manager", api.start_tag_manager))
   |> sup.add(

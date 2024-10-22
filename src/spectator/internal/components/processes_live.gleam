@@ -146,12 +146,12 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
           new_model,
           effect.batch([
             request_otp_details(p.pid, model.subject),
-            emit_after(common.refresh_interval, Refresh, option.None),
+            emit_after(common.refresh_interval, Refresh, model.subject),
           ]),
         )
         _ -> #(
           new_model,
-          emit_after(common.refresh_interval, Refresh, option.None),
+          emit_after(common.refresh_interval, Refresh, model.subject),
         )
       }
     }
@@ -423,7 +423,7 @@ fn render_details(
         }),
       ])
     _, _ ->
-      html.div([attribute.class("otp-placeholder")], [
+      html.div([attribute.class("footer-placeholder")], [
         html.text("Click a process to see details"),
       ])
   }
@@ -518,7 +518,7 @@ pub fn render(
           sort_criteria,
           sort_direction,
           handle_heading_click,
-          align_right: False,
+          align_right: True,
         ),
       ]),
     ]),
@@ -542,7 +542,9 @@ pub fn render(
             html.td([attribute.class("cell-right")], [
               display.number(process.info.message_queue_len),
             ]),
-            html.td([], [display.atom(process.info.status)]),
+            html.td([attribute.class("cell-right")], [
+              display.atom(process.info.status),
+            ]),
           ],
         )
       }),

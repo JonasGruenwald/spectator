@@ -40,13 +40,22 @@ pub fn pid_button(
         ],
         [html.text(atom.to_string(name))],
       )
+    None, Some("__spectator_internal" <> internal_tag) ->
+      html.button(
+        [
+          event.on_click(on_click(pid)),
+          attribute.class("interactive-primitive muted"),
+          attribute.title("This process is used for the Spectator application"),
+        ],
+        [html.text("🔍" <> internal_tag <> api.format_pid(pid))],
+      )
     None, Some(tag) ->
       html.button(
         [
           event.on_click(on_click(pid)),
           attribute.class("interactive-primitive tagged"),
         ],
-        [html.text(tag <> api.format_pid(pid))],
+        [html.text("🔖 " <> tag <> api.format_pid(pid))],
       )
     Some(name), Some(tag) ->
       html.button(
@@ -55,7 +64,55 @@ pub fn pid_button(
           attribute.class("interactive-primitive named tagged"),
           attribute.title("PID" <> api.format_pid(pid)),
         ],
-        [html.text(tag <> "<" <> atom.to_string(name) <> ">")],
+        [html.text("🔖 " <> tag <> "<" <> atom.to_string(name) <> ">")],
+      )
+  }
+}
+
+pub fn pid_link(pid: process.Pid, name: Option(atom.Atom), tag: Option(String)) {
+  case name, tag {
+    None, None ->
+      html.a(
+        [
+          attribute.href("/processes?selected=" <> api.serialize_pid(pid)),
+          attribute.class("interactive-primitive"),
+        ],
+        [html.text(api.format_pid(pid))],
+      )
+    Some(name), None ->
+      html.a(
+        [
+          attribute.href("/processes?selected=" <> api.serialize_pid(pid)),
+          attribute.class("interactive-primitive named"),
+          attribute.title("PID" <> api.format_pid(pid)),
+        ],
+        [html.text(atom.to_string(name))],
+      )
+    None, Some("__spectator_internal" <> internal_tag) ->
+      html.a(
+        [
+          attribute.href("/processes?selected=" <> api.serialize_pid(pid)),
+          attribute.class("interactive-primitive muted"),
+          attribute.title("This process is used for the Spectator application"),
+        ],
+        [html.text("🔍" <> internal_tag <> api.format_pid(pid))],
+      )
+    None, Some(tag) ->
+      html.a(
+        [
+          attribute.href("/processes?selected=" <> api.serialize_pid(pid)),
+          attribute.class("interactive-primitive tagged"),
+        ],
+        [html.text("🔖 " <> tag <> api.format_pid(pid))],
+      )
+    Some(name), Some(tag) ->
+      html.a(
+        [
+          attribute.href("/processes?selected=" <> api.serialize_pid(pid)),
+          attribute.class("interactive-primitive named tagged"),
+          attribute.title("PID" <> api.format_pid(pid)),
+        ],
+        [html.text("🔖 " <> tag <> "<" <> atom.to_string(name) <> ">")],
       )
   }
 }
@@ -69,8 +126,13 @@ pub fn port_link(port: port.Port, name: Option(atom.Atom)) {
     None -> api.format_port(port)
     Some(n) -> api.format_port(port) <> " (" <> atom.to_string(n) <> ")"
   }
-  // TODO implement port link
-  html.a([attribute.href("#")], [html.text(label)])
+  html.a(
+    [
+      attribute.class("interactive-primitive"),
+      attribute.href("/ports?selected=" <> api.serialize_port(port)),
+    ],
+    [html.text(label)],
+  )
 }
 
 pub fn inspect(d: dynamic.Dynamic) {
@@ -131,7 +193,16 @@ pub fn system_primitive_interactive(
       pid_button(pid, name, tag, on_process_click)
     api.RemoteProcessPrimitive(name:, node:) -> named_remote_process(name, node)
     api.PortPrimitive(port_id:, name:) -> port_link(port_id, name)
-    api.NifResourcePrimitive(_) -> html.text("NIF Res")
+    api.NifResourcePrimitive(_) -> html.text("NIF Res.")
+  }
+}
+
+pub fn system_primitive(primitive: api.SystemPrimitive) {
+  case primitive {
+    api.ProcessPrimitive(pid:, name:, tag:) -> pid_link(pid, name, tag)
+    api.RemoteProcessPrimitive(name:, node:) -> named_remote_process(name, node)
+    api.PortPrimitive(port_id:, name:) -> port_link(port_id, name)
+    api.NifResourcePrimitive(_) -> html.text("NIF Res.")
   }
 }
 

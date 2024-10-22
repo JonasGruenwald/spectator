@@ -143,7 +143,7 @@ pub fn render(current_tab: String) {
       html.div([attribute.class("separator")], []),
       tab("ETS", current_tab, "/ets"),
       html.div([attribute.class("separator")], []),
-      tab("Ports", current_tab, ""),
+      tab("Ports", current_tab, "/ports"),
       html.div([attribute.class("separator")], []),
       tab("Stats", current_tab, ""),
     ]),

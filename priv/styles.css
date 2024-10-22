@@ -146,6 +146,15 @@ button:hover {
   padding: 0;
 }
 
+.interactive-primitive:hover {
+  background: var(--text);
+  color: var(--background);
+}
+
+.interactive-primitive.block {
+  display: block;
+}
+
 .interactive-primitive.tagged {
   color: var(--text-hightlight);
 }
@@ -313,9 +322,9 @@ tbody tr.tagged.selected {
   border-right: 1px solid var(--text);
 }
 
-.otp-placeholder,
-.ets-footer {
+.footer-placeholder {
   padding: 2px;
+  text-align: right;
 }
 
 .otp-toggle {
@@ -340,4 +349,22 @@ table.ets-data td {
 
 table.ets-data tbody tr:hover {
   background: var(--background);
+}
+
+/* Ports */
+
+.details.compact {
+  display: flex;
+}
+
+.details.compact>dl {
+  flex-basis: 33%;
+}
+
+.details.compact dt {
+  text-align: left;
+}
+
+.details.compact dd {
+  margin-left: 0;
 }

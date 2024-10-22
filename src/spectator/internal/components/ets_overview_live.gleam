@@ -1,6 +1,5 @@
 import gleam/erlang/atom
 import gleam/erlang/process
-import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/uri
@@ -238,9 +237,8 @@ fn view(model: Model) -> Element(Msg) {
     html.tfoot([], [
       html.tr([], [
         html.td([attribute.attribute("colspan", "8")], [
-          html.div([attribute.class("ets-footer")], [
-            display.number(list.length(model.tables)),
-            html.text(" tables found in total"),
+          html.div([attribute.class("footer-placeholder")], [
+            html.text("Click on a table to view data"),
           ]),
         ]),
       ]),
