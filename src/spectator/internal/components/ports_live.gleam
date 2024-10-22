@@ -244,7 +244,7 @@ fn view(model: Model) -> Element(Msg) {
           [
             html.td([], [render_name(port)]),
             html.td([], [html.text(port.info.command_name)]),
-            html.td([], [display.pid(port.info.connected_process)]),
+            html.td([], [display.system_primitive(port.info.connected_process)]),
             html.td([], [
               case port.info.os_pid {
                 Some(pid) -> display.number(pid)
@@ -295,9 +295,7 @@ fn render_details(p: Option(api.PortItem), d: Option(api.PortDetails)) {
       html.div([attribute.class("details compact")], [
         html.dl([], [
           html.dt([], [html.text("Connected Process")]),
-          html.dd([], [
-            display.pid_link(port.info.connected_process, None, None),
-          ]),
+          html.dd([], [display.system_primitive(port.info.connected_process)]),
         ]),
         html.dl([], [
           html.dt([], [html.text("Links")]),

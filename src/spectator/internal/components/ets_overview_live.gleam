@@ -215,10 +215,9 @@ fn view(model: Model) -> Element(Msg) {
             [attribute.class("cell-right")],
             link_cell(t, [display.storage_words(t.memory)]),
           ),
-          html.td(
-            [attribute.class("cell-right")],
-            link_cell(t, [display.pid(t.owner)]),
-          ),
+          html.td([attribute.class("cell-right")], [
+            display.system_primitive(t.owner),
+          ]),
           html.td(
             [attribute.class("cell-right")],
             link_cell(t, [display.atom(t.protection)]),

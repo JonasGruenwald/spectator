@@ -50,7 +50,7 @@ pub type Table {
     table_type: atom.Atom,
     size: Int,
     memory: Int,
-    owner: process.Pid,
+    owner: SystemPrimitive,
     protection: atom.Atom,
     read_concurrency: Bool,
     write_concurrency: Bool,
@@ -130,7 +130,7 @@ pub type PortInfo {
   PortInfo(
     command_name: String,
     registered_name: Option(atom.Atom),
-    connected_process: process.Pid,
+    connected_process: SystemPrimitive,
     os_pid: Option(Int),
     input: Int,
     output: Int,

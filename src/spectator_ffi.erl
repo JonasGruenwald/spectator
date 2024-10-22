@@ -102,7 +102,7 @@ get_port_info(Port) ->
         {ok,
             {port_info, list_to_bitstring(element(2, erlang:port_info(Port, name))),
                 to_option(erlang:port_info(Port, registered_name)),
-                element(2, erlang:port_info(Port, connected)),
+                classify_system_primitive(element(2, erlang:port_info(Port, connected))),
                 to_option(element(2, erlang:port_info(Port, os_pid))),
                 element(2, erlang:port_info(Port, input)),
                 element(2, erlang:port_info(Port, output)),
@@ -137,6 +137,7 @@ get_port_details(Port) ->
     end.
 
 % Normalize a pid, port, or nif resource into a SystemPrimitive() type
+% also looks up the spectator tag for a pid if it is a process
 classify_system_primitive(Item) ->
     case Item of
         Process when is_pid(Process) ->
@@ -276,7 +277,8 @@ format_port(Port) ->
 build_table_info(Table) ->
     % TODO would be nice to check if any of these are undefined first
     {table, ets:info(Table, id), ets:info(Table, name), ets:info(Table, type),
-        ets:info(Table, size), ets:info(Table, memory), ets:info(Table, owner),
+        ets:info(Table, size), ets:info(Table, memory), 
+      classify_system_primitive(ets:info(Table, owner)),
         ets:info(Table, protection), ets:info(Table, read_concurrency),
         ets:info(Table, write_concurrency)}.
 
