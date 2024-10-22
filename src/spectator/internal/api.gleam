@@ -25,9 +25,9 @@ pub type SysState {
 /// A box for a pid, port or nif resource.
 /// Used because some process info fields return lists of these types mixed together,
 /// we distinguish them in the Erlang ffi and put them into these boxes for matching.
-/// Includes items returned from
+/// Used to describe items returned from
 /// https://www.erlang.org/doc/apps/erts/erlang.html#process_info/2
-/// as 'links', 'monitors' and 'monitored_by'.
+/// as 'links', 'monitors' and 'monitored_by', also 'parent in 'get_details'
 pub type SystemPrimitive {
   ProcessPrimitive(
     pid: process.Pid,
@@ -39,6 +39,9 @@ pub type SystemPrimitive {
   NifResourcePrimitive(dynamic.Dynamic)
 }
 
+/// A table in the Erlang ETS system.
+/// Used as a box for information returned from
+/// https://www.erlang.org/doc/apps/stdlib/ets.html#info/2
 pub type Table {
   Table(
     id: erlang.Reference,
@@ -53,14 +56,18 @@ pub type Table {
   )
 }
 
+/// The data held by an ETS table.
 pub type TableData {
-  TableData(content: List(List(dynamic.Dynamic)), max_length: Int)
+  TableData(
+    /// Each entry in the content list is a row in the table.
+    /// Typically, all rows will have the same number of columns, but this is not guaranteed.
+    content: List(List(dynamic.Dynamic)),
+    /// The row is a list of dynamic data, each item is a column in the table.
+    max_length: Int,
+  )
 }
 
-pub type SpectatorDebugTag {
-  SpectatorDebugTag
-}
-
+// FIXME: needs a better name
 pub type Status {
   Status(
     pid: process.Pid,
@@ -71,26 +78,18 @@ pub type Status {
   )
 }
 
+/// A box for the details retuned for an OTP-compatible process 
 pub type OtpDetails {
   OtpDetails(pid: process.Pid, status: Status, state: dynamic.Dynamic)
 }
 
-pub type Module {
-  Module(atom.Atom)
-}
-
-pub type Function {
-  Function(atom.Atom)
-}
-
-pub type Arity {
-  Arity(Int)
-}
-
+/// An inspected process with detailed information,
+/// boxed together with the process pid.
 pub type ProcessItem {
   ProcessItem(pid: process.Pid, info: Info)
 }
 
+/// Detailed information about a process
 pub type ProcessDetails {
   ProcessDetails(
     messages: List(dynamic.Dynamic),
@@ -102,26 +101,27 @@ pub type ProcessDetails {
   )
 }
 
-pub type InfoSortCriteria {
-  Name
-  Tag
-  CurrentFunction
-  Memory
-  Reductions
-  MessageQueue
-  ProcessStatus
+/// The criteria by which to sort processes
+pub type ProcessSortCriteria {
+  SortByProcessName
+  SortByTag
+  SortByCurrentFunction
+  SortByProcessMemory
+  SortByReductions
+  SortByMessageQueue
+  SortByProcessStatus
 }
 
 pub type TableSortCriteria {
-  TableId
-  TableName
-  TableType
-  Size
-  TableMemory
-  Owner
-  Protection
-  ReadConcurrency
-  WriteConcurrency
+  SortByTableId
+  SortByTableName
+  SortByTableType
+  SortByTableSize
+  SortByTableMemory
+  SortByTableOwner
+  SortByTableProtection
+  SortByTableReadConcurrency
+  SortByTableWriteConcurrency
 }
 
 pub type SortDirection {
@@ -144,29 +144,19 @@ pub type Info {
   )
 }
 
-pub fn get_info_list() -> List(ProcessItem) {
-  list_processes()
-  |> list.filter_map(fn(pid) {
-    case get_info(pid) {
-      Error(e) -> Error(e)
-      Ok(info) -> Ok(ProcessItem(pid, info))
-    }
-  })
+// ------ SORTING
+
+pub fn invert_sort_direction(direction: SortDirection) -> SortDirection {
+  case direction {
+    Ascending -> Descending
+    Descending -> Ascending
+  }
 }
 
-fn function_to_string(f: #(atom.Atom, atom.Atom, Int)) {
-  atom.to_string(f.0) <> atom.to_string(f.1) <> int.to_string(f.2)
-}
-
-fn compare_name(a: ProcessItem, b: ProcessItem) -> order.Order {
-  case a.info.registered_name, b.info.registered_name {
-    Some(a_name), Some(b_name) ->
-      string.compare(atom.to_string(a_name), atom.to_string(b_name))
-    // Names are greater than PIDs
-    None, Some(_) -> order.Lt
-    Some(_), None -> order.Gt
-    // All PIDs are considered equal for sorting purposes
-    None, None -> order.Eq
+fn apply_direction(order: order.Order, direction: SortDirection) -> order.Order {
+  case direction {
+    Ascending -> order
+    Descending -> order.negate(order)
   }
 }
 
@@ -185,63 +175,42 @@ fn compare_tag(a: ProcessItem, b: ProcessItem) -> order.Order {
   }
 }
 
-pub fn invert_sort_direction(direction: SortDirection) -> SortDirection {
-  case direction {
-    Ascending -> Descending
-    Descending -> Ascending
+fn compare_name(a: ProcessItem, b: ProcessItem) -> order.Order {
+  case a.info.registered_name, b.info.registered_name {
+    Some(a_name), Some(b_name) ->
+      string.compare(atom.to_string(a_name), atom.to_string(b_name))
+    // Names are greater than PIDs
+    None, Some(_) -> order.Lt
+    Some(_), None -> order.Gt
+    // All PIDs are considered equal for sorting purposes
+    None, None -> order.Eq
   }
 }
 
-fn apply_direction(order: order.Order, direction: SortDirection) -> order.Order {
-  case direction {
-    Ascending -> order
-    Descending -> order.negate(order)
-  }
-}
-
-pub fn request_otp_data(p: process.Pid, callback: fn(OtpDetails) -> Nil) {
-  process.start(
-    fn() {
-      case get_status(p, 100) {
-        Error(_) -> {
-          Nil
-        }
-        Ok(status) -> {
-          let state =
-            get_state(p, 100)
-            |> result.unwrap(dynamic.from(option.None))
-          callback(OtpDetails(pid: p, status:, state:))
-        }
-      }
-    },
-    False,
-  )
-}
-
-pub fn sort_info_list(
+pub fn sort_process_list(
   input: List(ProcessItem),
-  criteria: InfoSortCriteria,
+  criteria: ProcessSortCriteria,
   direction: SortDirection,
 ) -> List(ProcessItem) {
   case criteria {
-    Memory -> {
+    SortByProcessMemory -> {
       list.sort(input, fn(a, b) {
         int.compare(a.info.memory, b.info.memory) |> apply_direction(direction)
       })
     }
-    Reductions -> {
+    SortByReductions -> {
       list.sort(input, fn(a, b) {
         int.compare(a.info.reductions, b.info.reductions)
         |> apply_direction(direction)
       })
     }
-    MessageQueue -> {
+    SortByMessageQueue -> {
       list.sort(input, fn(a, b) {
         int.compare(a.info.message_queue_len, b.info.message_queue_len)
         |> apply_direction(direction)
       })
     }
-    CurrentFunction -> {
+    SortByCurrentFunction -> {
       list.sort(input, fn(a, b) {
         string.compare(
           function_to_string(a.info.current_function),
@@ -250,17 +219,17 @@ pub fn sort_info_list(
         |> apply_direction(direction)
       })
     }
-    Name -> {
+    SortByProcessName -> {
       list.sort(input, fn(a, b) {
         compare_name(a, b) |> apply_direction(direction)
       })
     }
-    Tag -> {
+    SortByTag -> {
       list.sort(input, fn(a, b) {
         compare_tag(a, b) |> apply_direction(direction)
       })
     }
-    ProcessStatus -> {
+    SortByProcessStatus -> {
       list.sort(input, fn(a, b) {
         string.compare(
           atom.to_string(a.info.status),
@@ -296,6 +265,7 @@ pub fn sort_table_data(
       // Ok, but why?
       // Tables can have a variable number of columns, so we have to use lists
       // I still want to be able to sort by column index, so I have to index into the list
+      // -> Let's see how performances fares here, we could otherwise go for a map or erlang array
       let a_cell = disgustingly_index_into_list_at(a, sort_column)
       let b_cell = disgustingly_index_into_list_at(b, sort_column)
       case a_cell, b_cell {
@@ -317,19 +287,19 @@ pub fn sort_table_list(
   direction: SortDirection,
 ) -> List(Table) {
   case criteria {
-    TableId -> {
+    SortByTableId -> {
       list.sort(input, fn(a, b) {
         string.compare(string.inspect(a.id), string.inspect(b.id))
         |> apply_direction(direction)
       })
     }
-    TableName -> {
+    SortByTableName -> {
       list.sort(input, fn(a, b) {
         string.compare(atom.to_string(a.name), atom.to_string(b.name))
         |> apply_direction(direction)
       })
     }
-    TableType -> {
+    SortByTableType -> {
       list.sort(input, fn(a, b) {
         string.compare(
           atom.to_string(a.table_type),
@@ -338,23 +308,23 @@ pub fn sort_table_list(
         |> apply_direction(direction)
       })
     }
-    Size -> {
+    SortByTableSize -> {
       list.sort(input, fn(a, b) {
         int.compare(a.size, b.size) |> apply_direction(direction)
       })
     }
-    TableMemory -> {
+    SortByTableMemory -> {
       list.sort(input, fn(a, b) {
         int.compare(a.memory, b.memory) |> apply_direction(direction)
       })
     }
-    Owner -> {
+    SortByTableOwner -> {
       list.sort(input, fn(a, b) {
         string.compare(string.inspect(a.owner), string.inspect(b.owner))
         |> apply_direction(direction)
       })
     }
-    Protection -> {
+    SortByTableProtection -> {
       list.sort(input, fn(a, b) {
         string.compare(
           atom.to_string(a.protection),
@@ -363,13 +333,13 @@ pub fn sort_table_list(
         |> apply_direction(direction)
       })
     }
-    ReadConcurrency -> {
+    SortByTableReadConcurrency -> {
       list.sort(input, fn(a, b) {
         bool.compare(a.read_concurrency, b.read_concurrency)
         |> apply_direction(direction)
       })
     }
-    WriteConcurrency -> {
+    SortByTableWriteConcurrency -> {
       list.sort(input, fn(a, b) {
         bool.compare(a.write_concurrency, b.write_concurrency)
         |> apply_direction(direction)
@@ -377,6 +347,66 @@ pub fn sort_table_list(
     }
   }
 }
+
+// ------ DATA FETCHING AND PROCESSING
+
+// -------[PROCESS LIST]
+
+pub fn get_info_list() -> List(ProcessItem) {
+  list_processes()
+  |> list.filter_map(fn(pid) {
+    case get_info(pid) {
+      Error(e) -> Error(e)
+      Ok(info) -> Ok(ProcessItem(pid, info))
+    }
+  })
+}
+
+@external(erlang, "erlang", "processes")
+pub fn list_processes() -> List(process.Pid)
+
+@external(erlang, "spectator_ffi", "get_info")
+pub fn get_info(pid: process.Pid) -> Result(Info, dynamic.Dynamic)
+
+// -------[PROCESS DETAILS]
+
+@external(erlang, "spectator_ffi", "get_details")
+pub fn get_details(pid: process.Pid) -> Result(ProcessDetails, dynamic.Dynamic)
+
+// -------[OTP PROCESS DETAILS]
+
+pub fn request_otp_data(p: process.Pid, callback: fn(OtpDetails) -> Nil) {
+  process.start(
+    fn() {
+      case get_status(p, 100) {
+        Error(_) -> {
+          Nil
+        }
+        Ok(status) -> {
+          let state =
+            get_state(p, 100)
+            |> result.unwrap(dynamic.from(option.None))
+          callback(OtpDetails(pid: p, status:, state:))
+        }
+      }
+    },
+    False,
+  )
+}
+
+@external(erlang, "spectator_ffi", "get_status")
+pub fn get_status(
+  pid: process.Pid,
+  timeout: Int,
+) -> Result(Status, dynamic.Dynamic)
+
+@external(erlang, "spectator_ffi", "get_state")
+pub fn get_state(
+  pid: process.Pid,
+  timeout: Int,
+) -> Result(dynamic.Dynamic, dynamic.Dynamic)
+
+// -------[ETS]
 
 pub fn get_ets_data(table: Table) {
   use raw_data <- result.try(get_raw_ets_data(table.id))
@@ -406,7 +436,33 @@ fn process_raw_ets_data(
   }
 }
 
-// Direct bindings to Erlang APIs
+@external(erlang, "spectator_ffi", "list_ets_tables")
+pub fn list_ets_tables() -> Result(List(Table), Nil)
+
+@external(erlang, "spectator_ffi", "get_ets_table_info")
+pub fn get_ets_table_info(name: atom.Atom) -> Result(Table, Nil)
+
+@external(erlang, "spectator_ffi", "get_ets_data")
+pub fn get_raw_ets_data(
+  table: erlang.Reference,
+) -> Result(List(List(OpaqueTuple)), Nil)
+
+@external(erlang, "spectator_ffi", "opaque_tuple_to_list")
+pub fn opaque_tuple_to_list(tuple: OpaqueTuple) -> List(dynamic.Dynamic)
+
+// ------ FORMATTING
+
+fn function_to_string(f: #(atom.Atom, atom.Atom, Int)) {
+  atom.to_string(f.0) <> atom.to_string(f.1) <> int.to_string(f.2)
+}
+
+@external(erlang, "spectator_ffi", "format_pid")
+pub fn format_pid(pid: process.Pid) -> String
+
+@external(erlang, "spectator_ffi", "format_port")
+pub fn format_port(port: port.Port) -> String
+
+// ------- SYSTEM INTERACTION
 
 @external(erlang, "sys", "suspend")
 pub fn suspend(pid: process.Pid) -> Nil
@@ -417,58 +473,10 @@ pub fn resume(pid: process.Pid) -> Nil
 @external(erlang, "ets", "insert")
 pub fn ets_insert(table: atom.Atom, tuple: List(#(k, v))) -> Nil
 
-// Spectator FFI
-@external(erlang, "spectator_ffi", "get_status")
-pub fn get_status(
-  pid: process.Pid,
-  timeout: Int,
-) -> Result(Status, dynamic.Dynamic)
-
-@external(erlang, "erlang", "processes")
-pub fn list_processes() -> List(process.Pid)
-
-@external(erlang, "spectator_ffi", "get_info")
-pub fn get_info(pid: process.Pid) -> Result(Info, dynamic.Dynamic)
-
-@external(erlang, "spectator_ffi", "get_details")
-pub fn get_details(pid: process.Pid) -> Result(ProcessDetails, dynamic.Dynamic)
-
-@external(erlang, "spectator_ffi", "get_all_info")
-pub fn get_all_info(
-  pid: process.Pid,
-) -> Result(List(dynamic.Dynamic), dynamic.Dynamic)
-
-@external(erlang, "spectator_ffi", "get_state")
-pub fn get_state(
-  pid: process.Pid,
-  timeout: Int,
-) -> Result(dynamic.Dynamic, dynamic.Dynamic)
-
-@external(erlang, "spectator_ffi", "format_pid")
-pub fn format_pid(pid: process.Pid) -> String
-
-@external(erlang, "spectator_ffi", "format_port")
-pub fn format_port(port: port.Port) -> String
-
-@external(erlang, "spectator_ffi", "list_ets_tables")
-pub fn list_ets_tables() -> Result(List(Table), Nil)
-
-@external(erlang, "spectator_ffi", "get_ets_table_info")
-pub fn get_ets_table_info(name: atom.Atom) -> Result(Table, Nil)
-
 @external(erlang, "spectator_ffi", "new_ets_table")
 pub fn new_ets_table(name: atom.Atom) -> Result(atom.Atom, Nil)
 
-@external(erlang, "spectator_ffi", "get_ets_data")
-pub fn get_raw_ets_data(
-  table: erlang.Reference,
-) -> Result(List(List(OpaqueTuple)), Nil)
-
-@external(erlang, "spectator_ffi", "opaque_tuple_to_list")
-pub fn opaque_tuple_to_list(tuple: OpaqueTuple) -> List(dynamic.Dynamic)
-
-@external(erlang, "spectator_ffi", "get_word_size")
-pub fn get_word_size() -> Int
+// ------- SYSTEM INFORMATION
 
 @external(erlang, "spectator_ffi", "compare_data")
 pub fn compare_dynamic_data(
@@ -476,7 +484,10 @@ pub fn compare_dynamic_data(
   b: dynamic.Dynamic,
 ) -> order.Order
 
-// Tag manager (gen_server)
+@external(erlang, "spectator_ffi", "get_word_size")
+pub fn get_word_size() -> Int
+
+// ------- TAG MANAGER GEN_SERVER
 
 @external(erlang, "spectator_tag_manager", "start_link")
 pub fn start_tag_manager() -> Result(process.Pid, dynamic.Dynamic)

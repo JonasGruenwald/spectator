@@ -3,7 +3,6 @@
     get_status/2,
     get_state/2,
     get_info/1,
-    get_all_info/1,
     format_pid/1,
     get_details/1,
     format_port/1,
@@ -213,13 +212,6 @@ get_details(Name) ->
         E:Reason ->
             erlang:display(E),
             {error, Reason}
-    end.
-
-get_all_info(Name) ->
-    case erlang:process_info(Name) of
-        undefined -> {error, not_found};
-        [] -> {error, no_info};
-        Info -> {ok, Info}
     end.
 
 format_pid(Pid) ->

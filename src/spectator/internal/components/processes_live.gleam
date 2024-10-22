@@ -28,7 +28,7 @@ pub type Model {
   Model(
     subject: Option(process.Subject(Msg)),
     process_list: List(api.ProcessItem),
-    sort_criteria: api.InfoSortCriteria,
+    sort_criteria: api.ProcessSortCriteria,
     sort_direction: api.SortDirection,
     active_process: Option(api.ProcessItem),
     details: Option(api.ProcessDetails),
@@ -77,9 +77,10 @@ fn request_otp_details(
 
 fn init(_) -> #(Model, effect.Effect(Msg)) {
   let info = api.get_info_list()
-  let default_sort_criteria = api.Reductions
+  let default_sort_criteria = api.SortByReductions
   let default_sort_direction = api.Descending
-  let sorted = api.sort_info_list(info, default_sort_criteria, api.Descending)
+  let sorted =
+    api.sort_process_list(info, default_sort_criteria, api.Descending)
   #(
     Model(
       subject: option.None,
@@ -102,7 +103,7 @@ pub opaque type Msg {
   ReceivedOtpDetails(details: api.OtpDetails)
   CreatedSubject(process.Subject(Msg))
   ProcessClicked(api.ProcessItem)
-  HeadingClicked(api.InfoSortCriteria)
+  HeadingClicked(api.ProcessSortCriteria)
   OtpStateClicked(api.ProcessItem, api.SysState)
   PidClicked(process.Pid)
 }
@@ -110,7 +111,7 @@ pub opaque type Msg {
 fn do_refresh(model: Model) -> Model {
   let info = api.get_info_list()
   let sorted =
-    api.sort_info_list(info, model.sort_criteria, model.sort_direction)
+    api.sort_process_list(info, model.sort_criteria, model.sort_direction)
 
   let active_process = case model.active_process {
     None -> None
@@ -450,9 +451,9 @@ pub fn render(
   details: Option(api.ProcessDetails),
   status: Option(api.Status),
   state: Option(dynamic.Dynamic),
-  sort_criteria: api.InfoSortCriteria,
+  sort_criteria: api.ProcessSortCriteria,
   sort_direction: api.SortDirection,
-  handle_heading_click: fn(api.InfoSortCriteria) -> Msg,
+  handle_heading_click: fn(api.ProcessSortCriteria) -> Msg,
   handle_otp_state_click: fn(api.ProcessItem, api.SysState) -> Msg,
 ) {
   html.table([], [
@@ -461,7 +462,7 @@ pub fn render(
         table.heading(
           "Name",
           "Process PID or registered name",
-          api.Name,
+          api.SortByProcessName,
           sort_criteria,
           sort_direction,
           handle_heading_click,
@@ -470,7 +471,7 @@ pub fn render(
         table.heading(
           "Tag",
           "Spectator tag or initial call",
-          api.Tag,
+          api.SortByTag,
           sort_criteria,
           sort_direction,
           handle_heading_click,
@@ -479,7 +480,7 @@ pub fn render(
         table.heading(
           "Current",
           "Current function",
-          api.CurrentFunction,
+          api.SortByCurrentFunction,
           sort_criteria,
           sort_direction,
           handle_heading_click,
@@ -488,7 +489,7 @@ pub fn render(
         table.heading(
           "Reductions",
           "Number of reductions",
-          api.Reductions,
+          api.SortByReductions,
           sort_criteria,
           sort_direction,
           handle_heading_click,
@@ -497,7 +498,7 @@ pub fn render(
         table.heading(
           "Memory",
           "Memory usage",
-          api.Memory,
+          api.SortByProcessMemory,
           sort_criteria,
           sort_direction,
           handle_heading_click,
@@ -506,7 +507,7 @@ pub fn render(
         table.heading(
           "Msgs",
           "Message queue size",
-          api.MessageQueue,
+          api.SortByMessageQueue,
           sort_criteria,
           sort_direction,
           handle_heading_click,
@@ -515,7 +516,7 @@ pub fn render(
         table.heading(
           "Status",
           "Process Status",
-          api.ProcessStatus,
+          api.SortByProcessStatus,
           sort_criteria,
           sort_direction,
           handle_heading_click,

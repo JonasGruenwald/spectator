@@ -56,7 +56,7 @@ fn emit_after(
 }
 
 fn init(_) {
-  let defaul_sort_criteria = api.Size
+  let defaul_sort_criteria = api.SortByTableSize
   let defaul_sort_direction = api.Descending
   #(
     Model(
@@ -131,7 +131,7 @@ fn view(model: Model) -> Element(Msg) {
         table.heading(
           "Name",
           "Table Name",
-          api.TableName,
+          api.SortByTableName,
           model.sort_criteria,
           model.sort_direction,
           HeadingClicked,
@@ -140,7 +140,7 @@ fn view(model: Model) -> Element(Msg) {
         table.heading(
           "Type",
           "Table Type",
-          api.TableType,
+          api.SortByTableType,
           model.sort_criteria,
           model.sort_direction,
           HeadingClicked,
@@ -149,7 +149,7 @@ fn view(model: Model) -> Element(Msg) {
         table.heading(
           "Size",
           "Table Size",
-          api.Size,
+          api.SortByTableSize,
           model.sort_criteria,
           model.sort_direction,
           HeadingClicked,
@@ -158,7 +158,7 @@ fn view(model: Model) -> Element(Msg) {
         table.heading(
           "Memory",
           "Table Memory",
-          api.TableMemory,
+          api.SortByTableMemory,
           model.sort_criteria,
           model.sort_direction,
           HeadingClicked,
@@ -167,7 +167,7 @@ fn view(model: Model) -> Element(Msg) {
         table.heading(
           "Owner",
           "Table Owner",
-          api.Owner,
+          api.SortByTableOwner,
           model.sort_criteria,
           model.sort_direction,
           HeadingClicked,
@@ -176,7 +176,7 @@ fn view(model: Model) -> Element(Msg) {
         table.heading(
           "Protection",
           "Table Protection",
-          api.Protection,
+          api.SortByTableProtection,
           model.sort_criteria,
           model.sort_direction,
           HeadingClicked,
@@ -185,7 +185,7 @@ fn view(model: Model) -> Element(Msg) {
         table.heading(
           "Read Conc.",
           "Table Read Concurrency",
-          api.ReadConcurrency,
+          api.SortByTableReadConcurrency,
           model.sort_criteria,
           model.sort_direction,
           HeadingClicked,
@@ -194,7 +194,7 @@ fn view(model: Model) -> Element(Msg) {
         table.heading(
           "Write Conc.",
           "Table Write Concurrency",
-          api.WriteConcurrency,
+          api.SortByTableWriteConcurrency,
           model.sort_criteria,
           model.sort_direction,
           HeadingClicked,
