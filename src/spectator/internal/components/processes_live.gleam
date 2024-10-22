@@ -37,6 +37,10 @@ pub type Model {
   )
 }
 
+fn emit_message(msg: Msg) -> effect.Effect(Msg) {
+  effect.from(fn(dispatch) { dispatch(msg) })
+}
+
 fn emit_after(
   delay: Int,
   msg: Msg,
@@ -75,7 +79,7 @@ fn request_otp_details(
   }
 }
 
-fn init(_) -> #(Model, effect.Effect(Msg)) {
+fn init(initial_selection: Option(String)) -> #(Model, effect.Effect(Msg)) {
   let info = api.get_process_list()
   let default_sort_criteria = api.SortByReductions
   let default_sort_direction = api.Descending
@@ -92,7 +96,18 @@ fn init(_) -> #(Model, effect.Effect(Msg)) {
       status: option.None,
       state: option.None,
     ),
-    emit_after(common.refresh_interval, Refresh, option.None),
+    effect.batch([
+      emit_after(common.refresh_interval, Refresh, option.None),
+      case initial_selection {
+        None -> effect.none()
+        Some(potential_pid) -> {
+          case api.decode_pid(potential_pid) {
+            Ok(pid) -> emit_message(PidClicked(pid))
+            Error(_) -> effect.none()
+          }
+        }
+      },
+    ]),
   )
 }
 

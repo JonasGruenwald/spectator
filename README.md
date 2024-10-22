@@ -17,10 +17,11 @@ This is a work in progress, so far it has the following features:
 - Suspend / resume OTP processes
 - List ETS tables
 - View content of ETS tables
+- List of active ports
+- Clickable links between resources
 
 The goal is to extend it with these features in the future:
 
-- [ ] List of active Ports
 - [ ] Basic system statistics
 - [ ] Pretty print dynamic data into HTML for nicer state inspection
 - [ ] Inspect other Erlang nodes 
@@ -28,7 +29,7 @@ The goal is to extend it with these features in the future:
 ## Installation
 
 ```sh
-gleam add spectator@1
+gleam add spectator
 ```
 
 ## Usage

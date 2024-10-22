@@ -55,19 +55,38 @@ fn emit_after(
   }
 }
 
-fn init(_) -> #(Model, effect.Effect(Msg)) {
+fn init(initial_selection: Option(String)) -> #(Model, effect.Effect(Msg)) {
   let info = api.get_port_list()
   let default_sort_criteria = api.SortByPortInput
   let default_sort_direction = api.Descending
   let sorted = api.sort_port_list(info, default_sort_criteria, api.Descending)
+  let active_port = case initial_selection {
+    None -> None
+    Some(raw_port_id) -> {
+      use port_id <- option.then(
+        api.decode_port(raw_port_id) |> option.from_result,
+      )
+      use info <- option.then(api.get_port_info(port_id) |> option.from_result)
+      Some(api.PortItem(port_id:, info:))
+    }
+  }
+  let details = case active_port {
+    None -> None
+    Some(ap) -> {
+      case api.get_port_details(ap.port_id) {
+        Ok(details) -> Some(details)
+        Error(_) -> None
+      }
+    }
+  }
   #(
     Model(
       subject: option.None,
       port_list: sorted,
       sort_criteria: default_sort_criteria,
       sort_direction: default_sort_direction,
-      active_port: option.None,
-      details: option.None,
+      active_port:,
+      details:,
     ),
     emit_after(common.refresh_interval, Refresh, option.None),
   )

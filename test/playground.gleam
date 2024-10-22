@@ -1,3 +1,4 @@
+import chrobot
 import gleam/erlang/atom
 import gleam/erlang/process
 import gleam/int
@@ -59,8 +60,9 @@ pub fn main() {
   process.start(fn() { keep_adding_to_table(table3, 1) }, False)
 
   // Start another OTP actor and tag it for spectator
-  // let assert Ok(browser) = chrobot.launch_window()
-  // |> spectator.tag_result("Chrobot Browser")
+  let assert Ok(_browser) =
+    chrobot.launch()
+    |> spectator.tag_result("Chrobot Browser")
 
   // let assert Ok(_) = chrobot.open(browser, "http://127.0.0.1:3000/processes/", 5_000)
   // Sleep on the main process so the program doesn't exit

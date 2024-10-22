@@ -8,10 +8,12 @@ import gleam/http/response.{type Response}
 import gleam/int
 import gleam/io
 import gleam/json
-import gleam/option
+import gleam/list
+import gleam/option.{None, Some}
 import gleam/otp/actor
 import gleam/otp/static_supervisor as sup
 import gleam/result
+import gleam/uri
 import lustre
 import lustre/attribute
 import lustre/element
@@ -32,20 +34,32 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
   let not_found = response.set_body(response.new(404), empty_body)
   let server_result =
     fn(req: Request(Connection)) -> Response(ResponseData) {
+      let params = request.get_query(req) |> result.unwrap([])
+      let selected =
+        list.find_map(params, fn(p) {
+          case p {
+            #("selected", value) -> Ok(value)
+            _ -> Error(Nil)
+          }
+        })
+        |> option.from_result
+
       case request.path_segments(req) {
         // App Routes
-        ["processes"] -> render_server_component("Processes", "process-feed")
-        ["ets"] -> render_server_component("ETS", "ets-feed")
-        ["ets", table] -> render_server_component("ETS", "ets-feed/" <> table)
-        ["ports"] -> render_server_component("Ports", "port-feed")
+        ["processes"] ->
+          render_server_component("Processes", "process-feed", selected)
+        ["ets"] -> render_server_component("ETS", "ets-feed", selected)
+        ["ets", table] ->
+          render_server_component("ETS", "ets-feed/" <> table, selected)
+        ["ports"] -> render_server_component("Ports", "port-feed", selected)
         // WebSocket Routes
         ["process-feed"] ->
-          connect_server_component(req, processes_live.app, Nil)
+          connect_server_component(req, processes_live.app, selected)
         ["ets-feed"] ->
-          connect_server_component(req, ets_overview_live.app, Nil)
+          connect_server_component(req, ets_overview_live.app, selected)
         ["ets-feed", table] ->
           connect_server_component(req, ets_table_live.app, table)
-        ["port-feed"] -> connect_server_component(req, ports_live.app, Nil)
+        ["port-feed"] -> connect_server_component(req, ports_live.app, selected)
         // Static files
         ["favicon.svg"] -> {
           let assert Ok(priv) = erlang.priv_directory("spectator")
@@ -147,7 +161,11 @@ pub fn tag_result(
   }
 }
 
-fn render_server_component(title: String, server_component_path path: String) {
+fn render_server_component(
+  title: String,
+  server_component_path path: String,
+  selected selected: option.Option(String),
+) {
   let res = response.new(200)
   let styles = common.static_file("styles.css")
   let html =
@@ -166,7 +184,15 @@ fn render_server_component(title: String, server_component_path path: String) {
         navbar.render(title),
         element.element(
           "lustre-server-component",
-          [server_component.route("/" <> path)],
+          [
+            case selected {
+              None -> server_component.route("/" <> path)
+              Some(selected) ->
+                server_component.route(
+                  "/" <> path <> "?selected=" <> uri.percent_encode(selected),
+                )
+            },
+          ],
           [],
         ),
       ]),
