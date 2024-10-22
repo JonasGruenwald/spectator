@@ -1,7 +1,6 @@
 import gleam/erlang/atom
 import gleam/erlang/process
 import gleam/int
-import gleam/io
 import spectator
 import spectator/internal/api
 import utils/pantry
