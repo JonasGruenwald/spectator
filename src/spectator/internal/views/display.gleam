@@ -19,17 +19,45 @@ pub fn pid(pid: process.Pid) {
 pub fn pid_button(
   pid: process.Pid,
   name: Option(atom.Atom),
+  tag: Option(String),
   on_click: fn(process.Pid) -> a,
 ) {
-  html.button(
-    [event.on_click(on_click(pid)), attribute.class("pid-interactive")],
-    [
-      case name {
-        None -> html.text(api.format_pid(pid))
-        Some(n) -> html.text(api.format_pid(pid) <> " (" <> atom.to_string(n) <> ")")
-      },
-    ],
-  )
+  case name, tag {
+    None, None ->
+      html.button(
+        [
+          event.on_click(on_click(pid)),
+          attribute.class("interactive-primitive"),
+        ],
+        [html.text(api.format_pid(pid))],
+      )
+    Some(name), None ->
+      html.button(
+        [
+          event.on_click(on_click(pid)),
+          attribute.class("interactive-primitive named"),
+          attribute.title("PID" <> api.format_pid(pid)),
+        ],
+        [html.text(atom.to_string(name))],
+      )
+    None, Some(tag) ->
+      html.button(
+        [
+          event.on_click(on_click(pid)),
+          attribute.class("interactive-primitive tagged"),
+        ],
+        [html.text(tag <> api.format_pid(pid))],
+      )
+    Some(name), Some(tag) ->
+      html.button(
+        [
+          event.on_click(on_click(pid)),
+          attribute.class("interactive-primitive named tagged"),
+          attribute.title("PID" <> api.format_pid(pid)),
+        ],
+        [html.text(tag <> "<" <> atom.to_string(name) <> ">")],
+      )
+  }
 }
 
 pub fn port(port: port.Port) {
@@ -99,7 +127,8 @@ pub fn system_primitive_interactive(
   on_process_click: fn(process.Pid) -> a,
 ) {
   case primitive {
-    api.ProcessPrimitive(pid:, name:) -> pid_button(pid, name, on_process_click)
+    api.ProcessPrimitive(pid:, name:, tag:) ->
+      pid_button(pid, name, tag, on_process_click)
     api.RemoteProcessPrimitive(name:, node:) -> named_remote_process(name, node)
     api.PortPrimitive(port_id:, name:) -> port_link(port_id, name)
     api.NifResourcePrimitive(_) -> html.text("NIF Res")

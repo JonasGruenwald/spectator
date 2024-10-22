@@ -29,7 +29,11 @@ pub type SysState {
 /// https://www.erlang.org/doc/apps/erts/erlang.html#process_info/2
 /// as 'links', 'monitors' and 'monitored_by'.
 pub type SystemPrimitive {
-  ProcessPrimitive(pid: process.Pid, name: Option(atom.Atom))
+  ProcessPrimitive(
+    pid: process.Pid,
+    name: Option(atom.Atom),
+    tag: Option(String),
+  )
   PortPrimitive(port_id: port.Port, name: Option(atom.Atom))
   RemoteProcessPrimitive(name: atom.Atom, node: atom.Atom)
   NifResourcePrimitive(dynamic.Dynamic)
@@ -94,7 +98,7 @@ pub type ProcessDetails {
     monitored_by: List(SystemPrimitive),
     monitors: List(SystemPrimitive),
     trap_exit: Bool,
-    parent: Option(process.Pid),
+    parent: Option(SystemPrimitive),
   )
 }
 

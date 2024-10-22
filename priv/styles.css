@@ -137,13 +137,22 @@ button:hover {
   height: 3em;
 }
 
-.pid-interactive {
+.interactive-primitive {
   cursor: pointer;
   background: var(--background);
   color: var(--text);
   text-decoration: underline;
   border: 0;
   padding: 0;
+}
+
+.interactive-primitive.tagged {
+  color: var(--text-hightlight);
+}
+
+.interactive-primitive.tagged:hover {
+  color: var(--background);
+  background: var(--text-hightlight);
 }
 
 /* Table View */

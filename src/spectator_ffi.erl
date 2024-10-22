@@ -94,7 +94,8 @@ get_info(Name) ->
 classify_system_primitive(Item) ->
     case Item of
         Process when is_pid(Process) ->
-            {process_primitive, Process, get_process_name_option(Process)};
+            {process_primitive, Process, get_process_name_option(Process),
+                spectator_tag_manager:get_tag(Process)};
         Port when is_port(Port) -> {port_primitive, Port, get_port_name_option(Port)};
         NifResource ->
             {nif_resource_primitive, NifResource}
@@ -175,14 +176,14 @@ get_details(Name) ->
                                     case whereis(RegName) of
                                         % If the PID lookup fails, we filter this process out
                                         undefined -> false;
-                                        Pid -> {true, {process_primitive, Pid, {some, RegName}}}
+                                        Pid -> {true, {process_primitive, Pid, {some, RegName}, spectator_tag_manager:get_tag(Pid)}}
                                     end;
                                 %  Remote process monitored by name
                                 {process, {RegName, Node}} ->
                                     {true, {remote_process_primitive, RegName, Node}};
                                 % Local process monitored by pid
                                 {process, Pid} ->
-                                    {true, {process_primitive, Pid, get_process_name_option(Pid)}};
+                                    {true, {process_primitive, Pid, get_process_name_option(Pid), spectator_tag_manager:get_tag(Pid)}};
                                 % Port monitored by name
                                 % (Node is always the local node, it's a legacy field)
                                 {port, {RegName, _Node}} ->
@@ -203,7 +204,7 @@ get_details(Name) ->
                     % Parent
                     case element(6, DetailsTuple) of
                         undefined -> none;
-                        Parent -> {some, Parent}
+                        Parent -> {some, classify_system_primitive(Parent)}
                     end
                 },
                 {ok, DetailsNormalized}

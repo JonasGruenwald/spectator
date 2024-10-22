@@ -331,9 +331,8 @@ fn render_details(
               html.dd([], [
                 case details.parent {
                   option.None -> html.text("None")
-                  option.Some(pid) ->
-                    // TODO: get parent with name and display with name
-                    display.pid_button(pid, None, PidClicked)
+                  option.Some(parent) ->
+                    display.system_primitive_interactive(parent, PidClicked)
                 },
               ]),
             ]),
