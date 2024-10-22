@@ -11,12 +11,28 @@ import gleam/order
 import gleam/result
 import gleam/string
 
-// A tuple from Erlang that could be any size
+/// A tuple from Erlang that could be any size.
+/// Used to represent ETS table data as it is not guaranteed to have a uniform number of columns.
 pub type OpaqueTuple
 
+/// The "SysState" type from the Erlang `sys` module, as returned by this function:
+/// https://www.erlang.org/doc/apps/stdlib/sys.html#get_status/2
 pub type SysState {
-  Running
-  Suspended
+  ProcessRunning
+  ProcessSuspended
+}
+
+/// A box for a pid, port or nif resource.
+/// Used because some process info fields return lists of these types mixed together,
+/// we distinguish them in the Erlang ffi and put them into these boxes for matching.
+/// Includes items returned from
+/// https://www.erlang.org/doc/apps/erts/erlang.html#process_info/2
+/// as 'links', 'monitors' and 'monitored_by'.
+pub type SystemPrimitive {
+  ProcessPrimitive(pid: process.Pid, name: Option(atom.Atom))
+  PortPrimitive(port_id: port.Port, name: Option(atom.Atom))
+  RemoteProcessPrimitive(name: atom.Atom, node: atom.Atom)
+  NifResourcePrimitive(dynamic.Dynamic)
 }
 
 pub type Table {
@@ -35,14 +51,6 @@ pub type Table {
 
 pub type TableData {
   TableData(content: List(List(dynamic.Dynamic)), max_length: Int)
-}
-
-pub type SystemPrimitive {
-  Process(process.Pid)
-  RegisteredProcess(atom.Atom)
-  Port(port.Port)
-  RegisteredPort(atom.Atom)
-  NifResource(dynamic.Dynamic)
 }
 
 pub type SpectatorDebugTag {
@@ -406,7 +414,6 @@ pub fn resume(pid: process.Pid) -> Nil
 pub fn ets_insert(table: atom.Atom, tuple: List(#(k, v))) -> Nil
 
 // Spectator FFI
-
 @external(erlang, "spectator_ffi", "get_status")
 pub fn get_status(
   pid: process.Pid,

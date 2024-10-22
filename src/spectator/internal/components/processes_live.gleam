@@ -1,6 +1,7 @@
 import gleam/dynamic
 import gleam/erlang/atom
 import gleam/erlang/process
+import gleam/io
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import logging
@@ -105,7 +106,7 @@ pub opaque type Msg {
   ProcessClicked(api.ProcessItem)
   HeadingClicked(api.InfoSortCriteria)
   OtpStateClicked(api.ProcessItem, api.SysState)
-  SystemPrimitiveClicked(api.SystemPrimitive)
+  PidClicked(process.Pid)
 }
 
 fn do_refresh(model: Model) -> Model {
@@ -127,7 +128,9 @@ fn do_refresh(model: Model) -> Model {
     None -> None
     Some(ap) -> {
       case api.get_details(ap.pid) {
-        Ok(details) -> Some(details)
+        Ok(details) -> {
+          Some(details)
+        }
         Error(_) -> None
       }
     }
@@ -196,39 +199,26 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
     }
     OtpStateClicked(p, target_sys_state) -> {
       case target_sys_state {
-        api.Suspended -> {
+        api.ProcessSuspended -> {
           api.resume(p.pid)
           #(do_refresh(model), request_otp_details(p.pid, model.subject))
         }
-        api.Running -> {
+        api.ProcessRunning -> {
           api.suspend(p.pid)
           #(do_refresh(model), request_otp_details(p.pid, model.subject))
         }
       }
     }
-    SystemPrimitiveClicked(primitive) -> {
-      case primitive {
-        api.Process(pid) -> {
-          case api.get_info(pid) {
-            Ok(info) -> {
-              let p = api.ProcessItem(pid, info)
-              let new_model =
-                Model(
-                  ..model,
-                  active_process: Some(p),
-                  state: None,
-                  status: None,
-                )
-                |> do_refresh
-              #(new_model, request_otp_details(p.pid, model.subject))
-            }
-            Error(_) -> #(model, effect.none())
-          }
+    PidClicked(pid) -> {
+      case api.get_info(pid) {
+        Ok(info) -> {
+          let p = api.ProcessItem(pid, info)
+          let new_model =
+            Model(..model, active_process: Some(p), state: None, status: None)
+            |> do_refresh
+          #(new_model, request_otp_details(p.pid, model.subject))
         }
-        _ -> {
-          logging.log(logging.Warning, "System primitive click unhandled")
-          #(model, effect.none())
-        }
+        Error(_) -> #(model, effect.none())
       }
     }
   }
@@ -268,7 +258,7 @@ fn render_tag(process: api.ProcessItem) {
 
 fn render_primitive_list(
   primitives: List(api.SystemPrimitive),
-  on_primitive_click: fn(api.SystemPrimitive) -> Msg,
+  on_primitive_click: fn(process.Pid) -> Msg,
 ) {
   list.map(primitives, display.system_primitive_interactive(
     _,
@@ -323,27 +313,18 @@ fn render_details(
             ]),
             html.dl([], [
               html.dt([], [html.text("Links")]),
-              html.dd(
-                [],
-                render_primitive_list(details.links, SystemPrimitiveClicked),
-              ),
+              html.dd([], render_primitive_list(details.links, PidClicked)),
             ]),
             html.dl([], [
               html.dt([], [html.text("Monitored By")]),
               html.dd(
                 [],
-                render_primitive_list(
-                  details.monitored_by,
-                  SystemPrimitiveClicked,
-                ),
+                render_primitive_list(details.monitored_by, PidClicked),
               ),
             ]),
             html.dl([], [
               html.dt([], [html.text("Monitors")]),
-              html.dd(
-                [],
-                render_primitive_list(details.monitors, SystemPrimitiveClicked),
-              ),
+              html.dd([], render_primitive_list(details.monitors, PidClicked)),
             ]),
             html.dl([], [
               html.dt([], [html.text("Parent")]),
@@ -351,9 +332,8 @@ fn render_details(
                 case details.parent {
                   option.None -> html.text("None")
                   option.Some(pid) ->
-                    display.pid_button(pid, fn(pid) {
-                      SystemPrimitiveClicked(api.Process(pid))
-                    })
+                    // TODO: get parent with name and display with name
+                    display.pid_button(pid, None, PidClicked)
                 },
               ]),
             ]),
@@ -390,7 +370,7 @@ fn render_details(
                 html.strong([], [html.text("☎️ OTP Process: ")]),
                 display.atom(status.module),
                 case status.sys_state {
-                  api.Suspended -> {
+                  api.ProcessSuspended -> {
                     html.button(
                       [
                         event.on_click(handle_otp_state_click(
@@ -402,7 +382,7 @@ fn render_details(
                       [html.text("🏃‍♀️‍➡️ Resume")],
                     )
                   }
-                  api.Running -> {
+                  api.ProcessRunning -> {
                     html.button(
                       [
                         event.on_click(handle_otp_state_click(

@@ -1,3 +1,4 @@
+import gleam/io
 import gleam/erlang/atom
 import gleam/erlang/process
 import gleam/int
@@ -37,6 +38,11 @@ pub fn main() {
   // register the actor under a name
   register(atom.create_from_string("registered_actor"), pid)
 
+  monitor_by_name(
+    atom.create_from_string("process"),
+    atom.create_from_string("registered_actor"),
+  )
+
   // Create an ETS table
 
   let assert Ok(table1) =
@@ -59,8 +65,12 @@ pub fn main() {
 
   // let assert Ok(_) = chrobot.open(browser, "http://127.0.0.1:3000/processes/", 5_000)
   // Sleep on the main process so the program doesn't exit
+  spectator.tag(process.self(), "Playground Main")
   process.sleep_forever()
 }
 
 @external(erlang, "erlang", "register")
 fn register(name: atom.Atom, pid: process.Pid) -> Nil
+
+@external(erlang, "erlang", "monitor")
+fn monitor_by_name(resource: atom.Atom, name: atom.Atom) -> Nil

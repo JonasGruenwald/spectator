@@ -40,7 +40,7 @@ pub fn get_status_test() {
   |> should.equal(process.self())
 
   status.sys_state
-  |> should.equal(api.Running)
+  |> should.equal(api.ProcessRunning)
 }
 
 pub fn get_status_failure_test() {

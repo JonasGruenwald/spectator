@@ -5,6 +5,7 @@ import gleam/erlang/atom
 import gleam/erlang/port
 import gleam/erlang/process
 import gleam/int
+import gleam/option.{type Option, None, Some}
 import gleam/string
 import lustre/attribute
 import lustre/element/html
@@ -15,15 +16,33 @@ pub fn pid(pid: process.Pid) {
   html.text("PID" <> api.format_pid(pid))
 }
 
-pub fn pid_button(pid: process.Pid, on_click: fn(process.Pid) -> a) {
+pub fn pid_button(
+  pid: process.Pid,
+  name: Option(atom.Atom),
+  on_click: fn(process.Pid) -> a,
+) {
   html.button(
     [event.on_click(on_click(pid)), attribute.class("pid-interactive")],
-    [html.text("PID" <> api.format_pid(pid))],
+    [
+      case name {
+        None -> html.text(api.format_pid(pid))
+        Some(n) -> html.text(api.format_pid(pid) <> " (" <> atom.to_string(n) <> ")")
+      },
+    ],
   )
 }
 
 pub fn port(port: port.Port) {
   html.text(api.format_port(port))
+}
+
+pub fn port_link(port: port.Port, name: Option(atom.Atom)) {
+  let label = case name {
+    None -> api.format_port(port)
+    Some(n) -> api.format_port(port) <> " (" <> atom.to_string(n) <> ")"
+  }
+  // TODO implement port link
+  html.a([attribute.href("#")], [html.text(label)])
 }
 
 pub fn inspect(d: dynamic.Dynamic) {
@@ -71,26 +90,19 @@ pub fn bool(b: Bool) {
   }
 }
 
-pub fn system_primitive_interactive(
-  primitive: api.SystemPrimitive,
-  on_click: fn(api.SystemPrimitive) -> a,
-) {
-  case primitive {
-    api.Process(p) -> pid_button(p, fn(pid) { on_click(api.Process(pid)) })
-    api.RegisteredProcess(name) -> atom(name)
-    api.Port(p) -> port(p)
-    api.RegisteredPort(name) -> atom(name)
-    api.NifResource(_) -> html.text("NIF Res")
-  }
+pub fn named_remote_process(name: atom.Atom, node: atom.Atom) {
+  html.text(atom.to_string(name) <> " on " <> atom.to_string(node))
 }
 
-pub fn system_primitive(primitive: api.SystemPrimitive) {
+pub fn system_primitive_interactive(
+  primitive: api.SystemPrimitive,
+  on_process_click: fn(process.Pid) -> a,
+) {
   case primitive {
-    api.Process(p) -> pid(p)
-    api.RegisteredProcess(name) -> atom(name)
-    api.Port(p) -> port(p)
-    api.RegisteredPort(name) -> atom(name)
-    api.NifResource(_) -> html.text("NIF Res")
+    api.ProcessPrimitive(pid:, name:) -> pid_button(pid, name, on_process_click)
+    api.RemoteProcessPrimitive(name:, node:) -> named_remote_process(name, node)
+    api.PortPrimitive(port_id:, name:) -> port_link(port_id, name)
+    api.NifResourcePrimitive(_) -> html.text("NIF Res")
   }
 }
 

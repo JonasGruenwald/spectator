@@ -41,8 +41,8 @@ extract_sysstate_and_parent([], SysState, Parent) ->
     {SysState, Parent};
 extract_sysstate_and_parent([H | T], SysState, Parent) ->
     case H of
-        running -> extract_sysstate_and_parent(T, running, Parent);
-        suspended -> extract_sysstate_and_parent(T, suspended, Parent);
+        running -> extract_sysstate_and_parent(T, process_running, Parent);
+        suspended -> extract_sysstate_and_parent(T, process_suspended, Parent);
         Pid when is_pid(Pid) -> extract_sysstate_and_parent(T, SysState, Pid);
         _ -> extract_sysstate_and_parent(T, SysState, Parent)
     end.
@@ -90,11 +90,36 @@ get_info(Name) ->
         _:Reason -> {error, Reason}
     end.
 
+% Normalize a pid, port, or nif resource into a SystemPrimitive() type
 classify_system_primitive(Item) ->
     case Item of
-        Process when is_pid(Process) -> {process, Process};
-        Port when is_port(Port) -> {port, Port};
-        NifResource -> {nif_resource, NifResource}
+        Process when is_pid(Process) ->
+            {process_primitive, Process, get_process_name_option(Process)};
+        Port when is_port(Port) -> {port_primitive, Port, get_port_name_option(Port)};
+        NifResource ->
+            {nif_resource_primitive, NifResource}
+    end.
+
+% Get the name of a process wrapped in a Gleam Option type
+get_process_name_option(Pid) ->
+    try
+        case erlang:process_info(Pid, registered_name) of
+            {registered_name, Name} -> {some, Name};
+            _ -> none
+        end
+    catch
+        error:badarg -> none
+    end.
+
+% Get the name of a port wrapped in a Gleam Option type
+get_port_name_option(Port) ->
+    try
+        case erlang:port_info(Port, name) of
+            {registered_name, Name} -> {some, Name};
+            _ -> none
+        end
+    catch
+        error:badarg -> none
     end.
 
 % Get additional details of a process for display in a details view
@@ -120,31 +145,62 @@ get_details(Name) ->
                 DetailsNormalized = {
                     % Prefix to turn into Details() type
                     details,
+                    % Messages
                     element(1, DetailsTuple),
+                    % Links -> we normalize into SystemPrimitive()
                     lists:map(
                         fun classify_system_primitive/1,
                         element(2, DetailsTuple)
                     ),
+                    % Monitored By -> we normalize into SystemPrimitive()
                     lists:map(
                         fun classify_system_primitive/1,
                         element(3, DetailsTuple)
                     ),
-                    lists:map(
+                    % Monitors -> we normalize into SystemPrimitive()
+                    % There is a lot of remapping here, let's break it down:
+                    % - We receive the monitors either by id or name based on how they are monitored
+                    % - But we don't actually care if a resource is monitored by id or name
+                    %    - We DO want to know the id of every resource, even if its is monitored by name
+                    %    - We also want to know the name of the resource if it has one,
+                    %      even if it is not monitored by that name
+                    % - For this reason we look up the respective id/name for each resource.
+                    % - We also handle the special case of a remote process monitored by name separately.
+                    % - In case an ID lookup fails, we filter out the resource.
+                    lists:filtermap(
                         fun(Item) ->
                             case Item of
-                                {process, {RegName, _Node}} ->
-                                    {registered_process, RegName};
+                                % Local process monitored by name
+                                {process, {RegName, Node}} when Node == node() ->
+                                    case whereis(RegName) of
+                                        % If the PID lookup fails, we filter this process out
+                                        undefined -> false;
+                                        Pid -> {true, {process_primitive, Pid, {some, RegName}}}
+                                    end;
+                                %  Remote process monitored by name
+                                {process, {RegName, Node}} ->
+                                    {true, {remote_process_primitive, RegName, Node}};
+                                % Local process monitored by pid
                                 {process, Pid} ->
-                                    {process, Pid};
+                                    {true, {process_primitive, Pid, get_process_name_option(Pid)}};
+                                % Port monitored by name
+                                % (Node is always the local node, it's a legacy field)
                                 {port, {RegName, _Node}} ->
-                                    {registered_port, RegName};
+                                    case whereis(RegName) of
+                                        % If the Port ID lookup fails, we filter this port out
+                                        undefined -> false;
+                                        Port -> {true, {port_primitive, Port, RegName}}
+                                    end;
+                                % Port monitored by port id
                                 {port, PortId} ->
-                                    {port, PortId}
+                                    {true, {port_primitive, PortId, get_port_name_option(PortId)}}
                             end
                         end,
                         element(4, DetailsTuple)
                     ),
+                    % Trap Exit
                     element(5, DetailsTuple),
+                    % Parent
                     case element(6, DetailsTuple) of
                         undefined -> none;
                         Parent -> {some, Parent}
