@@ -250,7 +250,9 @@ fn view(model: Model) -> Element(Msg) {
           [
             html.td([], [render_name(port)]),
             html.td([], [html.text(port.info.command_name)]),
-            html.td([], [display.system_primitive(port.info.connected_process)]),
+            html.td([attribute.class("link-cell")], [
+              display.system_primitive(port.info.connected_process),
+            ]),
             html.td([], [
               case port.info.os_pid {
                 Some(pid) -> display.number(pid)

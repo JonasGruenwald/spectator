@@ -54,6 +54,10 @@ body {
   background: var(--background);
 }
 
+body {
+  overflow-y: scroll;
+}
+
 dl {
   margin: 5px;
 }
@@ -235,6 +239,15 @@ td {
   overflow: hidden;
 }
 
+td.link-cell {
+  padding: 0;
+}
+
+td.link-cell>a {
+  display: block;
+  padding: 2.5px;
+}
+
 td.cell-right,
 th.cell-right {
   text-align: right;
@@ -288,6 +301,14 @@ tbody tr.tagged.selected {
   color: var(--background);
 }
 
+.component-error {
+  width: 100%;
+  height: 50vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 /* Process Details View */
 .details {
   display: grid;
@@ -338,14 +359,6 @@ tbody tr.tagged.selected {
 
 /* ETS */
 
-.ets-table-error {
-  width: 100%;
-  height: 50vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
 table.ets-data td {
   border-bottom: 1px solid var(--muted);
   user-select: text;
@@ -371,4 +384,15 @@ table.ets-data tbody tr:hover {
 
 .details.compact dd {
   margin-left: 0;
+}
+
+/* Dashboard */
+
+.dashboard{
+  padding: 10px;
+}
+
+.column-chart{
+  padding: 2px;
+  border: 1px solid black
 }

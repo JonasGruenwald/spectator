@@ -88,7 +88,7 @@ pub type OtpDetails {
   OtpDetails(pid: process.Pid, status: ProcessOtpStatus, state: dynamic.Dynamic)
 }
 
-/// An inspected process with detailed information,
+/// An inspected process with associated information,
 /// boxed together with the process pid.
 pub type ProcessItem {
   ProcessItem(pid: process.Pid, info: ProcessInfo)
@@ -122,10 +122,13 @@ pub type ProcessDetails {
   )
 }
 
+/// An inspected port with associated information 
+/// boxed together with the port id.
 pub type PortItem {
   PortItem(port_id: port.Port, info: PortInfo)
 }
 
+/// Information about a port, as returned by `port_info/2`
 pub type PortInfo {
   PortInfo(
     command_name: String,
@@ -139,6 +142,7 @@ pub type PortInfo {
   )
 }
 
+/// Detailed information about a port
 pub type PortDetails {
   PortDetails(
     links: List(SystemPrimitive),

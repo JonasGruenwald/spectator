@@ -187,29 +187,35 @@ fn view(model: Model) -> Element(Msg) {
       [],
       table.map_rows(model.tables, fn(t) {
         html.tr([], [
-          html.td([], link_cell(t, [display.atom(t.name)])),
-          html.td([], link_cell(t, [display.atom(t.table_type)])),
           html.td(
-            [attribute.class("cell-right")],
+            [attribute.class("link-cell")],
+            link_cell(t, [display.atom(t.name)]),
+          ),
+          html.td(
+            [attribute.class("link-cell")],
+            link_cell(t, [display.atom(t.table_type)]),
+          ),
+          html.td(
+            [attribute.class("cell-right link-cell")],
             link_cell(t, [display.number(t.size), html.text(" items")]),
           ),
           html.td(
-            [attribute.class("cell-right")],
+            [attribute.class("cell-right link-cell")],
             link_cell(t, [display.storage_words(t.memory)]),
           ),
-          html.td([attribute.class("cell-right")], [
+          html.td([attribute.class("cell-right link-cell")], [
             display.system_primitive(t.owner),
           ]),
           html.td(
-            [attribute.class("cell-right")],
+            [attribute.class("cell-right link-cell")],
             link_cell(t, [display.atom(t.protection)]),
           ),
           html.td(
-            [attribute.class("cell-right")],
+            [attribute.class("cell-right link-cell")],
             link_cell(t, [display.bool(t.read_concurrency)]),
           ),
           html.td(
-            [attribute.class("cell-right")],
+            [attribute.class("cell-right link-cell")],
             link_cell(t, [display.bool(t.write_concurrency)]),
           ),
         ])

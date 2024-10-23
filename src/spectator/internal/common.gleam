@@ -12,6 +12,18 @@ pub const message_queue_threshold = 10
 
 pub const refresh_interval = 500
 
+pub const colour_process = "#EF5976"
+
+pub const colour_code = "#FDA870"
+
+pub const colour_ets = "#ECE27C"
+
+pub const colour_atom = "#95EA8C"
+
+pub const colour_binary = "#B498F6"
+
+pub const colour_other = "#91D0DA"
+
 pub type Params =
   List(#(String, String))
 

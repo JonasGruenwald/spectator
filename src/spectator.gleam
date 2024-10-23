@@ -20,6 +20,7 @@ import lustre/server_component
 import mist.{type Connection, type ResponseData, type WebsocketConnection}
 import spectator/internal/api
 import spectator/internal/common
+import spectator/internal/components/dashboard_live
 import spectator/internal/components/ets_overview_live
 import spectator/internal/components/ets_table_live
 import spectator/internal/components/ports_live
@@ -35,6 +36,8 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
       let query_params = request.get_query(req) |> result.unwrap([])
       case request.path_segments(req) {
         // App Routes
+        ["dashboard"] ->
+          render_server_component("Dashboard", "dashboard-feed", query_params)
         ["processes"] ->
           render_server_component("Processes", "process-feed", query_params)
         ["ets"] -> render_server_component("ETS", "ets-feed", query_params)
@@ -42,6 +45,8 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
           render_server_component("ETS", "ets-feed/" <> table, query_params)
         ["ports"] -> render_server_component("Ports", "port-feed", query_params)
         // WebSocket Routes
+        ["dashboard-feed"] ->
+          connect_server_component(req, dashboard_live.app, query_params)
         ["process-feed"] ->
           connect_server_component(req, processes_live.app, query_params)
         ["ets-feed"] ->

@@ -322,7 +322,7 @@ opaque_tuple_to_list(Tuple) ->
 
 get_memory_statistics() ->
     try
-        {ok, {memory_statistics, list_to_tuple(element(2, lists:unzip(erlang:memory())))}}
+        {ok, list_to_tuple([memory_statistics | element(2, lists:unzip(erlang:memory()))])}
     catch
         error:notsup -> {error, nil}
     end.
