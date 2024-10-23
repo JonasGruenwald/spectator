@@ -9,7 +9,6 @@ import lustre/effect
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
-import lustre/server_component
 import pprint
 import spectator/internal/api
 import spectator/internal/common
@@ -41,28 +40,6 @@ fn emit_message(msg: Msg) -> effect.Effect(Msg) {
   effect.from(fn(dispatch) { dispatch(msg) })
 }
 
-fn emit_after(
-  delay: Int,
-  msg: Msg,
-  subject: Option(process.Subject(Msg)),
-) -> effect.Effect(Msg) {
-  case subject {
-    Some(self) -> {
-      use _ <- effect.from
-      let _ = process.send_after(self, delay, msg)
-      Nil
-    }
-    None -> {
-      use dispatch, subject <- server_component.select
-      let selector =
-        process.new_selector() |> process.selecting(subject, fn(msg) { msg })
-      let _ = process.send_after(subject, delay, msg)
-      dispatch(CreatedSubject(subject))
-      selector
-    }
-  }
-}
-
 fn request_otp_details(
   pid: process.Pid,
   subject: Option(process.Subject(Msg)),
@@ -79,7 +56,7 @@ fn request_otp_details(
   }
 }
 
-fn init(initial_selection: Option(String)) -> #(Model, effect.Effect(Msg)) {
+fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
   let info = api.get_process_list()
   let default_sort_criteria = api.SortByReductions
   let default_sort_direction = api.Descending
@@ -97,10 +74,15 @@ fn init(initial_selection: Option(String)) -> #(Model, effect.Effect(Msg)) {
       state: option.None,
     ),
     effect.batch([
-      emit_after(common.refresh_interval, Refresh, option.None),
-      case initial_selection {
-        None -> effect.none()
-        Some(potential_pid) -> {
+      common.emit_after(
+        common.refresh_interval,
+        Refresh,
+        option.None,
+        CreatedSubject,
+      ),
+      case common.get_param(params, "selected") {
+        Error(_) -> effect.none()
+        Ok(potential_pid) -> {
           case api.decode_pid(potential_pid) {
             Ok(pid) -> emit_message(PidClicked(pid))
             Error(_) -> effect.none()
@@ -161,12 +143,22 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
           new_model,
           effect.batch([
             request_otp_details(p.pid, model.subject),
-            emit_after(common.refresh_interval, Refresh, model.subject),
+            common.emit_after(
+              common.refresh_interval,
+              Refresh,
+              model.subject,
+              CreatedSubject,
+            ),
           ]),
         )
         _ -> #(
           new_model,
-          emit_after(common.refresh_interval, Refresh, model.subject),
+          common.emit_after(
+            common.refresh_interval,
+            Refresh,
+            model.subject,
+            CreatedSubject,
+          ),
         )
       }
     }

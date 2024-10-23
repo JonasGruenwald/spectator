@@ -199,7 +199,7 @@ pub type SortDirection {
 /// RealTotal  = processes + RealSystem
 /// RealSystem = system + MissedSystem
 /// ---------------------------------------------------------
-pub type MemoryStatistics{
+pub type MemoryStatistics {
   MemoryStatistics(
     total: Int,
     processes: Int,
@@ -609,12 +609,10 @@ pub fn get_port_info(port: port.Port) -> Result(PortInfo, dynamic.Dynamic)
 @external(erlang, "spectator_ffi", "get_port_details")
 pub fn get_port_details(port: port.Port) -> Result(PortDetails, dynamic.Dynamic)
 
-
 // ------- [SYSTEM STATISTICS]
 
 @external(erlang, "spectator_ffi", "get_memory_statistics")
 pub fn get_memory_statistics() -> Result(MemoryStatistics, dynamic.Dynamic)
-
 
 // ------ FORMATTING
 

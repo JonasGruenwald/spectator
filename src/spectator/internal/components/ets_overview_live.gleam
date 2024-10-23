@@ -8,7 +8,6 @@ import lustre/attribute
 import lustre/effect
 import lustre/element.{type Element}
 import lustre/element/html
-import lustre/server_component
 import spectator/internal/api
 import spectator/internal/common
 import spectator/internal/views/display
@@ -32,28 +31,6 @@ pub type Model {
   )
 }
 
-fn emit_after(
-  delay: Int,
-  msg: Msg,
-  subject: Option(process.Subject(Msg)),
-) -> effect.Effect(Msg) {
-  case subject {
-    Some(self) -> {
-      use _ <- effect.from
-      let _ = process.send_after(self, delay, msg)
-      Nil
-    }
-    None -> {
-      use dispatch, subject <- server_component.select
-      let selector =
-        process.new_selector() |> process.selecting(subject, fn(msg) { msg })
-      let _ = process.send_after(subject, delay, msg)
-      dispatch(CreatedSubject(subject))
-      selector
-    }
-  }
-}
-
 fn init(_) {
   let defaul_sort_criteria = api.SortByTableSize
   let defaul_sort_direction = api.Descending
@@ -64,7 +41,7 @@ fn init(_) {
       sort_criteria: defaul_sort_criteria,
       sort_direction: defaul_sort_direction,
     ),
-    emit_after(common.refresh_interval, Refresh, None),
+    common.emit_after(common.refresh_interval, Refresh, None, CreatedSubject),
   )
 }
 
@@ -89,7 +66,12 @@ fn update(model: Model, msg: Msg) {
         ..model,
         tables: get_sorted_tables(model.sort_criteria, model.sort_direction),
       ),
-      emit_after(common.refresh_interval, Refresh, model.subject),
+      common.emit_after(
+        common.refresh_interval,
+        Refresh,
+        model.subject,
+        CreatedSubject,
+      ),
     )
     CreatedSubject(subject) -> #(
       Model(..model, subject: Some(subject)),
