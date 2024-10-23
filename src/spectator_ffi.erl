@@ -18,7 +18,8 @@
     pid_to_string/1,
     port_to_string/1,
     pid_from_string/1,
-    port_from_string/1
+    port_from_string/1,
+    get_memory_statistics/0
 ]).
 
 % Get the status of an OTP-compatible process or return an error
@@ -277,10 +278,9 @@ format_port(Port) ->
 build_table_info(Table) ->
     % TODO would be nice to check if any of these are undefined first
     {table, ets:info(Table, id), ets:info(Table, name), ets:info(Table, type),
-        ets:info(Table, size), ets:info(Table, memory), 
-      classify_system_primitive(ets:info(Table, owner)),
-        ets:info(Table, protection), ets:info(Table, read_concurrency),
-        ets:info(Table, write_concurrency)}.
+        ets:info(Table, size), ets:info(Table, memory),
+        classify_system_primitive(ets:info(Table, owner)), ets:info(Table, protection),
+        ets:info(Table, read_concurrency), ets:info(Table, write_concurrency)}.
 
 list_ets_tables() ->
     try
@@ -319,6 +319,13 @@ get_ets_data(Table) ->
 
 opaque_tuple_to_list(Tuple) ->
     tuple_to_list(Tuple).
+
+get_memory_statistics() ->
+    try
+        {ok, {memory_statistics, list_to_tuple(element(2, lists:unzip(erlang:memory())))}}
+    catch
+        error:notsup -> {error, nil}
+    end.
 
 new_ets_table(Name) ->
     try

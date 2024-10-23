@@ -187,6 +187,32 @@ pub type SortDirection {
   Descending
 }
 
+/// System memory information as returned by 
+/// https://www.erlang.org/doc/apps/erts/erlang.html#memory/0
+/// The different values have the following relation to each other. 
+/// Values beginning with an uppercase letter is not part of the result.
+/// ---------------------------------------------------------
+/// total      = processes + system
+/// processes  = processes_used + ProcessesNotUsed
+/// system     = atom + binary + code + ets + OtherSystem
+/// atom       = atom_used + AtomNotUsed
+/// RealTotal  = processes + RealSystem
+/// RealSystem = system + MissedSystem
+/// ---------------------------------------------------------
+pub type MemoryStatistics{
+  MemoryStatistics(
+    total: Int,
+    processes: Int,
+    processes_used: Int,
+    system: Int,
+    atom: Int,
+    atom_used: Int,
+    binary: Int,
+    code: Int,
+    ets: Int,
+  )
+}
+
 // ------ SORTING
 
 pub fn invert_sort_direction(direction: SortDirection) -> SortDirection {
@@ -582,6 +608,13 @@ pub fn get_port_info(port: port.Port) -> Result(PortInfo, dynamic.Dynamic)
 
 @external(erlang, "spectator_ffi", "get_port_details")
 pub fn get_port_details(port: port.Port) -> Result(PortDetails, dynamic.Dynamic)
+
+
+// ------- [SYSTEM STATISTICS]
+
+@external(erlang, "spectator_ffi", "get_memory_statistics")
+pub fn get_memory_statistics() -> Result(MemoryStatistics, dynamic.Dynamic)
+
 
 // ------ FORMATTING
 
