@@ -179,6 +179,7 @@ thead {
   position: sticky;
   top: 0;
   left: 0;
+  z-index: 1;
   background: var(--background);
   user-select: none;
 }
@@ -394,5 +395,27 @@ table.ets-data tbody tr:hover {
 
 .column-chart{
   padding: 2px;
-  border: 1px solid black
+  border: 1px solid var(--text);
+}
+
+.memory-breakdown{
+  display: flex;
+  gap: 10px
+}
+
+.legend-item{
+  display: flex
+}
+
+.legend-colour{
+  width: 2em;
+  height: 2em;
+  margin-right: 10px;
+  padding: 2px;
+  border: 1px solid var(--text);
+  display: flex;
+}
+
+.legend-colour > div{
+  flex-grow: 1;
 }

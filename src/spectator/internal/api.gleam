@@ -195,14 +195,14 @@ pub type SortDirection {
 /// https://www.erlang.org/doc/apps/erts/erlang.html#memory/0
 /// The different values have the following relation to each other. 
 /// Values beginning with an uppercase letter is not part of the result.
-/// ---------------------------------------------------------
+/// ```
 /// total      = processes + system
 /// processes  = processes_used + ProcessesNotUsed
 /// system     = atom + binary + code + ets + OtherSystem
 /// atom       = atom_used + AtomNotUsed
 /// RealTotal  = processes + RealSystem
 /// RealSystem = system + MissedSystem
-/// ---------------------------------------------------------
+/// ```
 pub type MemoryStatistics {
   MemoryStatistics(
     total: Int,

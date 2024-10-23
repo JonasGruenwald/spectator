@@ -1,7 +1,9 @@
 import gleam/erlang/process
 import gleam/float
 import gleam/int
+import gleam/io
 import gleam/option.{type Option, None, Some}
+import gleam/string
 import lustre
 import lustre/attribute
 import lustre/effect
@@ -10,6 +12,7 @@ import lustre/element/html
 import spectator/internal/api
 import spectator/internal/common
 import spectator/internal/views/charts.{ChartSegment}
+import spectator/internal/views/display
 
 // MAIN ------------------------------------------------------------------------
 
@@ -27,15 +30,16 @@ pub opaque type Model {
   )
 }
 
+/// Ther e are in percent and add up to 100
 type RelativeMemoryStatistics {
   RelativeMemoryStatistics(
-    total: Int,
     processes: Float,
     code: Float,
     ets: Float,
     atom: Float,
     binary: Float,
     other: Float,
+    other_absolute: Int,
   )
 }
 
@@ -65,15 +69,20 @@ fn get_relative_memory_stats(input: api.MemoryStatistics) {
   let ets = int.to_float(input.ets) *. factor
   let atom = int.to_float(input.atom) *. factor
   let binary = int.to_float(input.binary) *. factor
-  let other = 1000.0 -. processes -. code -. ets -. atom -. binary
+  let other = 100.0 -. processes -. code -. ets -. atom -. binary
+
   RelativeMemoryStatistics(
-    total: 100,
     processes:,
     code:,
     ets:,
     atom:,
     binary:,
     other:,
+    other_absolute: input.system
+      - input.atom
+      - input.binary
+      - input.code
+      - input.ets,
   )
 }
 
@@ -115,18 +124,7 @@ fn view(model: Model) -> Element(Msg) {
 
     Some(
       html.div([attribute.class("dashboard")], [
-        charts.column_chart(memory_relative.total, [
-          ChartSegment(
-            common.colour_process,
-            "Processes",
-            memory_relative.processes,
-          ),
-          ChartSegment(common.colour_code, "Code", memory_relative.code),
-          ChartSegment(common.colour_ets, "ETS", memory_relative.ets),
-          ChartSegment(common.colour_atom, "Atoms", memory_relative.atom),
-          ChartSegment(common.colour_binary, "Binaries", memory_relative.binary),
-          ChartSegment(common.colour_other, "Other", memory_relative.other),
-        ]),
+        render_memory_section(memory_stats, memory_relative),
       ]),
     )
   }
@@ -135,4 +133,57 @@ fn view(model: Model) -> Element(Msg) {
       html.text("Could not fetch dashboard data"),
     ]),
   )
+}
+
+fn render_memory_section(
+  memory_stats: api.MemoryStatistics,
+  memory_relative: RelativeMemoryStatistics,
+) {
+  html.section([], [
+    html.h1([], [html.text("Memory Usage")]),
+    charts.column_chart([
+      ChartSegment(
+        common.colour_process,
+        "Processes",
+        memory_relative.processes,
+      ),
+      ChartSegment(common.colour_code, "Code ", memory_relative.code),
+      ChartSegment(common.colour_ets, "ETS", memory_relative.ets),
+      ChartSegment(common.colour_atom, "Atoms", memory_relative.atom),
+      ChartSegment(common.colour_binary, "Binaries", memory_relative.binary),
+      ChartSegment(common.colour_other, "Other", memory_relative.other),
+    ]),
+    html.div([attribute.class("memory-breakdown")], [
+      charts.legend_item(
+        "Processes",
+        common.colour_process,
+        display.storage(memory_stats.processes),
+      ),
+      charts.legend_item(
+        "Code",
+        common.colour_code,
+        display.storage(memory_stats.code),
+      ),
+      charts.legend_item(
+        "ETS",
+        common.colour_ets,
+        display.storage(memory_stats.ets),
+      ),
+      charts.legend_item(
+        "Atoms",
+        common.colour_atom,
+        display.storage(memory_stats.atom),
+      ),
+      charts.legend_item(
+        "Binaries",
+        common.colour_binary,
+        display.storage(memory_stats.binary),
+      ),
+      charts.legend_item(
+        "Other",
+        common.colour_other,
+        display.storage(memory_relative.other_absolute),
+      ),
+    ]),
+  ])
 }
