@@ -1,16 +1,15 @@
 import gleam/erlang/atom
 import gleam/erlang/process
 import gleam/int
+import gleam/io
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
-import gleam/uri
 import lustre
 import lustre/attribute
 import lustre/effect
 import lustre/element.{type Element}
 import lustre/element/html
-import lustre/server_component
 import spectator/internal/api
 import spectator/internal/common
 import spectator/internal/views/display
@@ -35,28 +34,6 @@ pub type Model {
   )
 }
 
-fn emit_after(
-  delay: Int,
-  msg: Msg,
-  subject: Option(process.Subject(Msg)),
-) -> effect.Effect(Msg) {
-  case subject {
-    Some(self) -> {
-      use _ <- effect.from
-      let _ = process.send_after(self, delay, msg)
-      Nil
-    }
-    None -> {
-      use dispatch, subject <- server_component.select
-      let selector =
-        process.new_selector() |> process.selecting(subject, fn(msg) { msg })
-      let _ = process.send_after(subject, delay, msg)
-      dispatch(CreatedSubject(subject))
-      selector
-    }
-  }
-}
-
 /// Sometimes we can't get the table info from an atom directly
 /// so we fall back to the slower list lookup here
 fn get_ets_table_info_from_list(table_name: atom.Atom) {
@@ -65,8 +42,8 @@ fn get_ets_table_info_from_list(table_name: atom.Atom) {
   |> result.replace_error(Nil)
 }
 
-fn get_initial_data(table_name_raw: String) -> Result(Model, Nil) {
-  use table_name <- result.try(uri.percent_decode(table_name_raw))
+fn get_initial_data(params: common.Params) -> Result(Model, Nil) {
+  use table_name <- result.try(common.get_param(params, "table_name"))
   use table_atom <- result.try(
     atom.from_string(table_name) |> result.replace_error(Nil),
   )
@@ -85,9 +62,13 @@ fn get_initial_data(table_name_raw: String) -> Result(Model, Nil) {
   ))
 }
 
-fn init(table_name_raw: String) {
-  case get_initial_data(table_name_raw) {
-    Ok(model) -> #(model, emit_after(common.refresh_interval, Refresh, None))
+fn init(params: common.Params) {
+  io.debug(params)
+  case get_initial_data(params) {
+    Ok(model) -> #(
+      model,
+      common.emit_after(common.refresh_interval, Refresh, None, CreatedSubject),
+    )
     Error(_) -> #(Model(None, None, None, None, api.Descending), effect.none())
   }
 }
@@ -123,7 +104,12 @@ fn update(model: Model, msg: Msg) {
   case msg {
     Refresh -> #(
       do_refresh(model),
-      emit_after(common.refresh_interval, Refresh, None),
+      common.emit_after(
+        common.refresh_interval,
+        Refresh,
+        model.subject,
+        CreatedSubject,
+      ),
     )
 
     CreatedSubject(subject) -> #(
@@ -199,7 +185,7 @@ fn render_table_data(model: Model, table: api.Table, data: api.TableData) {
 }
 
 fn render_not_found() {
-  html.div([attribute.class("ets-table-error")], [
+  html.div([attribute.class("component-error")], [
     html.text("The referenced table could not be loaded."),
   ])
 }

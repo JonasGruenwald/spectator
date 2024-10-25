@@ -18,8 +18,19 @@
     pid_to_string/1,
     port_to_string/1,
     pid_from_string/1,
-    port_from_string/1
+    port_from_string/1,
+    get_memory_statistics/0,
+    get_system_info/0,
+    format_percentage/1,
+    kill_process/1
 ]).
+
+kill_process(Pid) ->
+    try
+        erlang:exit(Pid, kill)
+    catch
+        _:Reason -> {error, Reason}
+    end.
 
 % Get the status of an OTP-compatible process or return an error
 get_status(Name, Timeout) ->
@@ -277,10 +288,9 @@ format_port(Port) ->
 build_table_info(Table) ->
     % TODO would be nice to check if any of these are undefined first
     {table, ets:info(Table, id), ets:info(Table, name), ets:info(Table, type),
-        ets:info(Table, size), ets:info(Table, memory), 
-      classify_system_primitive(ets:info(Table, owner)),
-        ets:info(Table, protection), ets:info(Table, read_concurrency),
-        ets:info(Table, write_concurrency)}.
+        ets:info(Table, size), ets:info(Table, memory),
+        classify_system_primitive(ets:info(Table, owner)), ets:info(Table, protection),
+        ets:info(Table, read_concurrency), ets:info(Table, write_concurrency)}.
 
 list_ets_tables() ->
     try
@@ -303,6 +313,43 @@ get_ets_table_info(Table) ->
         error:badarg -> {error, nil}
     end.
 
+get_system_info() ->
+    try
+        {ok, {
+            system_info,
+            % Uptime String
+            uptime_string(),
+            % Architecture
+            list_to_bitstring(erlang:system_info(system_architecture)),
+            % ERTS version
+            list_to_bitstring(erlang:system_info(version)),
+            % OTP release
+            list_to_bitstring(erlang:system_info(otp_release)),
+            % Schedulers
+            erlang:system_info(schedulers),
+            % Schedulers online
+            erlang:system_info(schedulers_online),
+            % Atom count
+            erlang:system_info(atom_count),
+            % Atom limit
+            erlang:system_info(atom_limit),
+            % ETS count
+            erlang:system_info(ets_count),
+            % ETS limit
+            erlang:system_info(ets_limit),
+            % Port count
+            erlang:system_info(port_count),
+            % Port limit
+            erlang:system_info(port_limit),
+            % Process count
+            erlang:system_info(process_count),
+            % Process limit
+            erlang:system_info(process_limit)
+        }}
+    catch
+        error:_ -> {error, nil}
+    end.
+
 compare_data(Data1, Data2) when Data1 < Data2 ->
     lt;
 compare_data(Data1, Data2) when Data1 > Data2 ->
@@ -320,6 +367,13 @@ get_ets_data(Table) ->
 opaque_tuple_to_list(Tuple) ->
     tuple_to_list(Tuple).
 
+get_memory_statistics() ->
+    try
+        {ok, list_to_tuple([memory_statistics | element(2, lists:unzip(erlang:memory()))])}
+    catch
+        error:notsup -> {error, nil}
+    end.
+
 new_ets_table(Name) ->
     try
         {ok,
@@ -332,6 +386,9 @@ new_ets_table(Name) ->
 
 pid_to_string(Pid) ->
     list_to_bitstring(pid_to_list(Pid)).
+
+format_percentage(F) ->
+    list_to_bitstring(io_lib:format("~.2f%", [F])).
 
 port_to_string(Port) ->
     list_to_bitstring(port_to_list(Port)).
@@ -359,3 +416,13 @@ to_option(Input) ->
         undefined -> none;
         Value -> {some, Value}
     end.
+
+uptime_seconds() ->
+    NativeUptime = erlang:monotonic_time() - erlang:system_info(start_time),
+    erlang:convert_time_unit(NativeUptime, native, seconds).
+
+uptime_string() ->
+    {D, {H, M, S}} = calendar:seconds_to_daystime(uptime_seconds()),
+    list_to_bitstring(
+        io_lib:format("~p days ~p hours ~p minutes ~p seconds", [D, H, M, S])
+    ).

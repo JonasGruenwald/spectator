@@ -139,13 +139,14 @@ pub fn render(current_tab: String) {
     html.div([attribute.class("logo")], [icon(), html.text("Spectator")]),
     html.div([attribute.class("filler")], []),
     html.div([attribute.class("tabs")], [
+      tab("Dashboard", current_tab, "/dashboard"),
+      html.div([attribute.class("separator")], []),
       tab("Processes", current_tab, "/processes"),
       html.div([attribute.class("separator")], []),
       tab("ETS", current_tab, "/ets"),
       html.div([attribute.class("separator")], []),
       tab("Ports", current_tab, "/ports"),
       html.div([attribute.class("separator")], []),
-      tab("Stats", current_tab, ""),
     ]),
     html.div([attribute.class("filler")], []),
   ])

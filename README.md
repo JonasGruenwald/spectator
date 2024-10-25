@@ -19,11 +19,10 @@ This is a work in progress, so far it has the following features:
 - View content of ETS tables
 - List of active ports
 - Clickable links between resources
+- Dashboard with basic statistics
 
 The goal is to extend it with these features in the future:
 
-- [ ] Basic system statistics
-- [ ] Pretty print dynamic data into HTML for nicer state inspection
 - [ ] Inspect other Erlang nodes 
 
 ## Installation

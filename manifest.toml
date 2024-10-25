@@ -36,6 +36,7 @@ packages = [
 chrobot = { version = ">= 3.0.1 and < 4.0.0" }
 gleam_erlang = { version = ">= 0.27.0 and < 1.0.0" }
 gleam_http = { version = ">= 3.7.0 and < 4.0.0" }
+gleam_json = { version = ">= 1.0.1 and < 3.0.0" }
 gleam_otp = { version = ">= 0.12.1 and < 1.0.0" }
 gleam_stdlib = { version = ">= 0.34.0 and < 2.0.0" }
 gleeunit = { version = ">= 1.0.0 and < 2.0.0" }

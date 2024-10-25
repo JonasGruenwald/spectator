@@ -9,7 +9,6 @@ import lustre/effect
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
-import lustre/server_component
 import pprint
 import spectator/internal/api
 import spectator/internal/common
@@ -41,28 +40,6 @@ fn emit_message(msg: Msg) -> effect.Effect(Msg) {
   effect.from(fn(dispatch) { dispatch(msg) })
 }
 
-fn emit_after(
-  delay: Int,
-  msg: Msg,
-  subject: Option(process.Subject(Msg)),
-) -> effect.Effect(Msg) {
-  case subject {
-    Some(self) -> {
-      use _ <- effect.from
-      let _ = process.send_after(self, delay, msg)
-      Nil
-    }
-    None -> {
-      use dispatch, subject <- server_component.select
-      let selector =
-        process.new_selector() |> process.selecting(subject, fn(msg) { msg })
-      let _ = process.send_after(subject, delay, msg)
-      dispatch(CreatedSubject(subject))
-      selector
-    }
-  }
-}
-
 fn request_otp_details(
   pid: process.Pid,
   subject: Option(process.Subject(Msg)),
@@ -79,7 +56,7 @@ fn request_otp_details(
   }
 }
 
-fn init(initial_selection: Option(String)) -> #(Model, effect.Effect(Msg)) {
+fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
   let info = api.get_process_list()
   let default_sort_criteria = api.SortByReductions
   let default_sort_direction = api.Descending
@@ -97,10 +74,15 @@ fn init(initial_selection: Option(String)) -> #(Model, effect.Effect(Msg)) {
       state: option.None,
     ),
     effect.batch([
-      emit_after(common.refresh_interval, Refresh, option.None),
-      case initial_selection {
-        None -> effect.none()
-        Some(potential_pid) -> {
+      common.emit_after(
+        common.refresh_interval,
+        Refresh,
+        option.None,
+        CreatedSubject,
+      ),
+      case common.get_param(params, "selected") {
+        Error(_) -> effect.none()
+        Ok(potential_pid) -> {
           case api.decode_pid(potential_pid) {
             Ok(pid) -> emit_message(PidClicked(pid))
             Error(_) -> effect.none()
@@ -121,6 +103,7 @@ pub opaque type Msg {
   HeadingClicked(api.ProcessSortCriteria)
   OtpStateClicked(api.ProcessItem, api.SysState)
   PidClicked(process.Pid)
+  KillClicked(api.ProcessItem)
 }
 
 fn do_refresh(model: Model) -> Model {
@@ -161,12 +144,22 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
           new_model,
           effect.batch([
             request_otp_details(p.pid, model.subject),
-            emit_after(common.refresh_interval, Refresh, model.subject),
+            common.emit_after(
+              common.refresh_interval,
+              Refresh,
+              model.subject,
+              CreatedSubject,
+            ),
           ]),
         )
         _ -> #(
           new_model,
-          emit_after(common.refresh_interval, Refresh, model.subject),
+          common.emit_after(
+            common.refresh_interval,
+            Refresh,
+            model.subject,
+            CreatedSubject,
+          ),
         )
       }
     }
@@ -235,24 +228,125 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         Error(_) -> #(model, effect.none())
       }
     }
+    KillClicked(p) -> {
+      api.kill_process(p.pid)
+      #(do_refresh(model), effect.none())
+    }
   }
 }
 
 // VIEW ------------------------------------------------------------------------
 
 fn view(model: Model) -> Element(Msg) {
-  render(
-    model.process_list,
-    ProcessClicked,
-    model.active_process,
-    model.details,
-    model.status,
-    model.state,
-    model.sort_criteria,
-    model.sort_direction,
-    HeadingClicked,
-    OtpStateClicked,
-  )
+  html.table([], [
+    html.thead([], [
+      html.tr([], [
+        table.heading(
+          "Name",
+          "Process PID or registered name",
+          api.SortByProcessName,
+          model.sort_criteria,
+          model.sort_direction,
+          HeadingClicked,
+          align_right: False,
+        ),
+        table.heading(
+          "Tag",
+          "Spectator tag or initial call",
+          api.SortByTag,
+          model.sort_criteria,
+          model.sort_direction,
+          HeadingClicked,
+          align_right: False,
+        ),
+        table.heading(
+          "Current",
+          "Current function",
+          api.SortByCurrentFunction,
+          model.sort_criteria,
+          model.sort_direction,
+          HeadingClicked,
+          align_right: False,
+        ),
+        table.heading(
+          "Reductions",
+          "Number of reductions",
+          api.SortByReductions,
+          model.sort_criteria,
+          model.sort_direction,
+          HeadingClicked,
+          align_right: False,
+        ),
+        table.heading(
+          "Memory",
+          "Memory usage",
+          api.SortByProcessMemory,
+          model.sort_criteria,
+          model.sort_direction,
+          HeadingClicked,
+          align_right: True,
+        ),
+        table.heading(
+          "Msgs",
+          "Message queue size",
+          api.SortByMessageQueue,
+          model.sort_criteria,
+          model.sort_direction,
+          HeadingClicked,
+          align_right: True,
+        ),
+        table.heading(
+          "Status",
+          "Process Status",
+          api.SortByProcessStatus,
+          model.sort_criteria,
+          model.sort_direction,
+          HeadingClicked,
+          align_right: True,
+        ),
+      ]),
+    ]),
+    html.tbody(
+      [],
+      table.map_rows(model.process_list, fn(process) {
+        html.tr(
+          [
+            attribute.role("button"),
+            classify_selected(process, model.active_process),
+            event.on_click(ProcessClicked(process)),
+          ],
+          [
+            html.td([], [render_name(process)]),
+            html.td([], [render_tag(process)]),
+            html.td([], [display.function(process.info.current_function)]),
+            html.td([], [display.number(process.info.reductions)]),
+            html.td([attribute.class("cell-right")], [
+              display.storage(process.info.memory),
+            ]),
+            html.td([attribute.class("cell-right")], [
+              display.number(process.info.message_queue_len),
+            ]),
+            html.td([attribute.class("cell-right")], [
+              display.atom(process.info.status),
+            ]),
+          ],
+        )
+      }),
+    ),
+    html.tfoot([], [
+      html.tr([], [
+        html.td([attribute.attribute("colspan", "7")], [
+          render_details(
+            model.active_process,
+            model.details,
+            model.status,
+            model.state,
+            OtpStateClicked,
+          ),
+        ]),
+      ]),
+    ]),
+  ])
 }
 
 fn render_name(process: api.ProcessItem) {
@@ -317,6 +411,13 @@ fn render_details(
                   <> atom.to_string(name),
                 )
             },
+            html.button(
+              [
+                attribute.class("panel-action suspend"),
+                event.on_click(KillClicked(proc)),
+              ],
+              [html.text("🗡️ Kill")],
+            ),
           ]),
           html.div([attribute.class("panel-content")], [
             html.dl([], [
@@ -388,7 +489,7 @@ fn render_details(
                           proc,
                           status.sys_state,
                         )),
-                        attribute.class("otp-toggle resume"),
+                        attribute.class("panel-action resume"),
                       ],
                       [html.text("🏃‍♀️‍➡️ Resume")],
                     )
@@ -400,7 +501,7 @@ fn render_details(
                           proc,
                           status.sys_state,
                         )),
-                        attribute.class("otp-toggle suspend"),
+                        attribute.class("panel-action suspend"),
                       ],
                       [html.text("✋ Suspend")],
                     )
@@ -455,121 +556,4 @@ fn classify_selected(process: api.ProcessItem, active: Option(api.ProcessItem)) 
       attribute.class(selection_status <> " spectator-tagged")
     option.Some(_) -> attribute.class(selection_status <> " tagged")
   }
-}
-
-pub fn render(
-  processes: List(api.ProcessItem),
-  handle_process_click: fn(api.ProcessItem) -> Msg,
-  active: Option(api.ProcessItem),
-  details: Option(api.ProcessDetails),
-  status: Option(api.ProcessOtpStatus),
-  state: Option(dynamic.Dynamic),
-  sort_criteria: api.ProcessSortCriteria,
-  sort_direction: api.SortDirection,
-  handle_heading_click: fn(api.ProcessSortCriteria) -> Msg,
-  handle_otp_state_click: fn(api.ProcessItem, api.SysState) -> Msg,
-) {
-  html.table([], [
-    html.thead([], [
-      html.tr([], [
-        table.heading(
-          "Name",
-          "Process PID or registered name",
-          api.SortByProcessName,
-          sort_criteria,
-          sort_direction,
-          handle_heading_click,
-          align_right: False,
-        ),
-        table.heading(
-          "Tag",
-          "Spectator tag or initial call",
-          api.SortByTag,
-          sort_criteria,
-          sort_direction,
-          handle_heading_click,
-          align_right: False,
-        ),
-        table.heading(
-          "Current",
-          "Current function",
-          api.SortByCurrentFunction,
-          sort_criteria,
-          sort_direction,
-          handle_heading_click,
-          align_right: False,
-        ),
-        table.heading(
-          "Reductions",
-          "Number of reductions",
-          api.SortByReductions,
-          sort_criteria,
-          sort_direction,
-          handle_heading_click,
-          align_right: False,
-        ),
-        table.heading(
-          "Memory",
-          "Memory usage",
-          api.SortByProcessMemory,
-          sort_criteria,
-          sort_direction,
-          handle_heading_click,
-          align_right: True,
-        ),
-        table.heading(
-          "Msgs",
-          "Message queue size",
-          api.SortByMessageQueue,
-          sort_criteria,
-          sort_direction,
-          handle_heading_click,
-          align_right: True,
-        ),
-        table.heading(
-          "Status",
-          "Process Status",
-          api.SortByProcessStatus,
-          sort_criteria,
-          sort_direction,
-          handle_heading_click,
-          align_right: True,
-        ),
-      ]),
-    ]),
-    html.tbody(
-      [],
-      table.map_rows(processes, fn(process) {
-        html.tr(
-          [
-            attribute.role("button"),
-            classify_selected(process, active),
-            event.on_click(handle_process_click(process)),
-          ],
-          [
-            html.td([], [render_name(process)]),
-            html.td([], [render_tag(process)]),
-            html.td([], [display.function(process.info.current_function)]),
-            html.td([], [display.number(process.info.reductions)]),
-            html.td([attribute.class("cell-right")], [
-              display.storage(process.info.memory),
-            ]),
-            html.td([attribute.class("cell-right")], [
-              display.number(process.info.message_queue_len),
-            ]),
-            html.td([attribute.class("cell-right")], [
-              display.atom(process.info.status),
-            ]),
-          ],
-        )
-      }),
-    ),
-    html.tfoot([], [
-      html.tr([], [
-        html.td([attribute.attribute("colspan", "7")], [
-          render_details(active, details, status, state, handle_otp_state_click),
-        ]),
-      ]),
-    ]),
-  ])
 }

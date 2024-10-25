@@ -88,7 +88,7 @@ pub type OtpDetails {
   OtpDetails(pid: process.Pid, status: ProcessOtpStatus, state: dynamic.Dynamic)
 }
 
-/// An inspected process with detailed information,
+/// An inspected process with associated information,
 /// boxed together with the process pid.
 pub type ProcessItem {
   ProcessItem(pid: process.Pid, info: ProcessInfo)
@@ -122,10 +122,13 @@ pub type ProcessDetails {
   )
 }
 
+/// An inspected port with associated information 
+/// boxed together with the port id.
 pub type PortItem {
   PortItem(port_id: port.Port, info: PortInfo)
 }
 
+/// Information about a port, as returned by `port_info/2`
 pub type PortInfo {
   PortInfo(
     command_name: String,
@@ -139,6 +142,7 @@ pub type PortInfo {
   )
 }
 
+/// Detailed information about a port
 pub type PortDetails {
   PortDetails(
     links: List(SystemPrimitive),
@@ -185,6 +189,51 @@ pub type PortSortCriteria {
 pub type SortDirection {
   Ascending
   Descending
+}
+
+/// System memory information as returned by 
+/// https://www.erlang.org/doc/apps/erts/erlang.html#memory/0
+/// The different values have the following relation to each other. 
+/// Values beginning with an uppercase letter is not part of the result.
+/// ```
+/// total      = processes + system
+/// processes  = processes_used + ProcessesNotUsed
+/// system     = atom + binary + code + ets + OtherSystem
+/// atom       = atom_used + AtomNotUsed
+/// RealTotal  = processes + RealSystem
+/// RealSystem = system + MissedSystem
+/// ```
+pub type MemoryStatistics {
+  MemoryStatistics(
+    total: Int,
+    processes: Int,
+    processes_used: Int,
+    system: Int,
+    atom: Int,
+    atom_used: Int,
+    binary: Int,
+    code: Int,
+    ets: Int,
+  )
+}
+
+pub type SystemInfo {
+  SystemInfo(
+    uptime: String,
+    architecure: String,
+    erts_version: String,
+    otp_release: String,
+    schedulers: Int,
+    schedulers_online: Int,
+    atom_count: Int,
+    atom_limit: Int,
+    ets_count: Int,
+    ets_limit: Int,
+    port_count: Int,
+    port_limit: Int,
+    process_count: Int,
+    process_limit: Int,
+  )
 }
 
 // ------ SORTING
@@ -583,6 +632,11 @@ pub fn get_port_info(port: port.Port) -> Result(PortInfo, dynamic.Dynamic)
 @external(erlang, "spectator_ffi", "get_port_details")
 pub fn get_port_details(port: port.Port) -> Result(PortDetails, dynamic.Dynamic)
 
+// ------- [SYSTEM STATISTICS]
+
+@external(erlang, "spectator_ffi", "get_memory_statistics")
+pub fn get_memory_statistics() -> Result(MemoryStatistics, dynamic.Dynamic)
+
 // ------ FORMATTING
 
 fn function_to_string(f: #(atom.Atom, atom.Atom, Int)) {
@@ -596,6 +650,9 @@ pub fn format_pid(pid: process.Pid) -> String
 pub fn format_port(port: port.Port) -> String
 
 // ------- SYSTEM INTERACTION
+
+@external(erlang, "spectator_ffi", "kill_process")
+pub fn kill_process(pid: process.Pid) -> Nil
 
 @external(erlang, "sys", "suspend")
 pub fn suspend(pid: process.Pid) -> Nil
@@ -651,6 +708,9 @@ pub fn compare_dynamic_data(
 
 @external(erlang, "spectator_ffi", "get_word_size")
 pub fn get_word_size() -> Int
+
+@external(erlang, "spectator_ffi", "get_system_info")
+pub fn get_system_info() -> Result(SystemInfo, Nil)
 
 // ------- TAG MANAGER GEN_SERVER
 

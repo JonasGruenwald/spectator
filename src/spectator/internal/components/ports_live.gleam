@@ -8,7 +8,6 @@ import lustre/effect
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
-import lustre/server_component
 import spectator/internal/api
 import spectator/internal/common
 import spectator/internal/views/display
@@ -33,36 +32,14 @@ pub type Model {
   )
 }
 
-fn emit_after(
-  delay: Int,
-  msg: Msg,
-  subject: Option(process.Subject(Msg)),
-) -> effect.Effect(Msg) {
-  case subject {
-    Some(self) -> {
-      use _ <- effect.from
-      let _ = process.send_after(self, delay, msg)
-      Nil
-    }
-    None -> {
-      use dispatch, subject <- server_component.select
-      let selector =
-        process.new_selector() |> process.selecting(subject, fn(msg) { msg })
-      let _ = process.send_after(subject, delay, msg)
-      dispatch(CreatedSubject(subject))
-      selector
-    }
-  }
-}
-
-fn init(initial_selection: Option(String)) -> #(Model, effect.Effect(Msg)) {
+fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
   let info = api.get_port_list()
   let default_sort_criteria = api.SortByPortInput
   let default_sort_direction = api.Descending
   let sorted = api.sort_port_list(info, default_sort_criteria, api.Descending)
-  let active_port = case initial_selection {
-    None -> None
-    Some(raw_port_id) -> {
+  let active_port = case common.get_param(params, "selected") {
+    Error(_) -> None
+    Ok(raw_port_id) -> {
       use port_id <- option.then(
         api.decode_port(raw_port_id) |> option.from_result,
       )
@@ -88,7 +65,12 @@ fn init(initial_selection: Option(String)) -> #(Model, effect.Effect(Msg)) {
       active_port:,
       details:,
     ),
-    emit_after(common.refresh_interval, Refresh, option.None),
+    common.emit_after(
+      common.refresh_interval,
+      Refresh,
+      option.None,
+      CreatedSubject,
+    ),
   )
 }
 
@@ -135,7 +117,12 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
     Refresh -> {
       #(
         do_refresh(model),
-        emit_after(common.refresh_interval, Refresh, model.subject),
+        common.emit_after(
+          common.refresh_interval,
+          Refresh,
+          model.subject,
+          CreatedSubject,
+        ),
       )
     }
     CreatedSubject(subject) -> #(
@@ -263,7 +250,9 @@ fn view(model: Model) -> Element(Msg) {
           [
             html.td([], [render_name(port)]),
             html.td([], [html.text(port.info.command_name)]),
-            html.td([], [display.system_primitive(port.info.connected_process)]),
+            html.td([attribute.class("link-cell")], [
+              display.system_primitive(port.info.connected_process),
+            ]),
             html.td([], [
               case port.info.os_pid {
                 Some(pid) -> display.number(pid)

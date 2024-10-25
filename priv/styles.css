@@ -7,13 +7,16 @@
 
 
 :root {
-  :root {
-    --text: #ffffff;
-    --muted: #595959;
-    --background: #2f2f2f;
-    --highlight: #584355;
-    --text-hightlight: #ffaff3;
-  }
+  /* Default Theme */
+  --text: #ffffff;
+  --muted: #595959;
+  --background: #2f2f2f;
+  --highlight: #584355;
+  --text-hightlight: #ffaff3;
+
+  /* General */
+  --unnamed-blue: #a6f0fc;
+  --meter-bar: #ffaff3;
 }
 
 @media (prefers-color-scheme: light) {
@@ -54,6 +57,10 @@ body {
   background: var(--background);
 }
 
+body {
+  overflow-y: scroll;
+}
+
 dl {
   margin: 5px;
 }
@@ -80,6 +87,7 @@ button:hover {
   font-weight: 100;
   align-items: flex-end;
   justify-content: space-between;
+  user-select: none;
 }
 
 .lucy-icon {
@@ -175,6 +183,7 @@ thead {
   position: sticky;
   top: 0;
   left: 0;
+  z-index: 1;
   background: var(--background);
   user-select: none;
 }
@@ -235,6 +244,15 @@ td {
   overflow: hidden;
 }
 
+td.link-cell {
+  padding: 0;
+}
+
+td.link-cell>a {
+  display: block;
+  padding: 2.5px;
+}
+
 td.cell-right,
 th.cell-right {
   text-align: right;
@@ -288,6 +306,14 @@ tbody tr.tagged.selected {
   color: var(--background);
 }
 
+.component-error {
+  width: 100%;
+  height: 50vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 /* Process Details View */
 .details {
   display: grid;
@@ -331,20 +357,12 @@ tbody tr.tagged.selected {
   text-align: right;
 }
 
-.otp-toggle {
+.panel-action {
   margin-left: auto;
   cursor: pointer;
 }
 
 /* ETS */
-
-.ets-table-error {
-  width: 100%;
-  height: 50vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
 
 table.ets-data td {
   border-bottom: 1px solid var(--muted);
@@ -371,4 +389,78 @@ table.ets-data tbody tr:hover {
 
 .details.compact dd {
   margin-left: 0;
+}
+
+/* Dashboard */
+
+.dashboard {
+  padding: 10px;
+}
+
+.split {
+  display: flex;
+  gap: 100px;
+  width: 100%;
+}
+
+.split>div {
+  flex-basis: 50%;
+}
+
+.info-container {
+  border: 1px solid var(--text);
+}
+
+.info-item {
+  display: flex;
+}
+
+.info-item {
+  border-bottom: 1px solid var(--text);
+}
+
+.info-item:last-child {
+  border-bottom: 0;
+}
+
+.info-item>div {
+  flex-basis: 50%;
+  padding: 5px;
+}
+
+.info-label {
+  border-right: 1px solid var(--text);
+  text-align: right;
+}
+
+.column-chart,
+.meter-chart {
+  padding: 2px;
+  border: 1px solid var(--text);
+}
+
+.memory-breakdown {
+  display: flex;
+  gap: 10px
+}
+
+.limit-item{
+  margin-bottom: 10px;
+}
+
+.legend-item {
+  display: flex
+}
+
+.legend-colour {
+  width: 2em;
+  height: 2em;
+  margin-right: 10px;
+  padding: 2px;
+  border: 1px solid var(--text);
+  display: flex;
+}
+
+.legend-colour>div {
+  flex-grow: 1;
 }
