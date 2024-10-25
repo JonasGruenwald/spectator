@@ -1,5 +1,6 @@
 import gleam/erlang
 import gleam/erlang/process
+import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/string_builder
@@ -10,7 +11,7 @@ import simplifile
 
 pub const message_queue_threshold = 10
 
-pub const refresh_interval = 1000
+pub const refresh_interval_default = 1000
 
 pub const colour_process = "#EF5976"
 
@@ -54,6 +55,17 @@ pub fn get_param(params: Params, key: String) -> Result(String, Nil) {
       _ -> Error(Nil)
     }
   })
+}
+
+pub fn get_refresh_interval(params: Params) -> Int {
+  case get_param(params, "refresh") {
+    Ok(rate) ->
+      case int.parse(rate) {
+        Ok(r) -> r
+        Error(_) -> refresh_interval_default
+      }
+    Error(_) -> refresh_interval_default
+  }
 }
 
 @external(erlang, "spectator_ffi", "truncate_float")

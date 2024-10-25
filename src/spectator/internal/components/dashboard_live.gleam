@@ -22,6 +22,7 @@ pub fn app() {
 pub opaque type Model {
   Model(
     subject: Option(process.Subject(Msg)),
+    refresh_interval: Int,
     memory_stats: Option(api.MemoryStatistics),
     memory_relative: Option(RelativeMemoryStatistics),
     system_info: Option(api.SystemInfo),
@@ -49,17 +50,20 @@ type RelativeSystemLimits {
   RelativeSystemLimits(processes: Float, ports: Float, atoms: Float, ets: Float)
 }
 
-fn init(_params: common.Params) -> #(Model, effect.Effect(Msg)) {
-  #(
+fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
+  let initial_model =
     do_refresh(Model(
       subject: None,
+      refresh_interval: common.get_refresh_interval(params),
       memory_stats: None,
       memory_relative: None,
       system_info: None,
       system_limits: None,
-    )),
+    ))
+  #(
+    initial_model,
     common.emit_after(
-      common.refresh_interval,
+      initial_model.refresh_interval,
       Refresh,
       option.None,
       CreatedSubject,
@@ -133,7 +137,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       #(
         do_refresh(model),
         common.emit_after(
-          common.refresh_interval,
+          model.refresh_interval,
           Refresh,
           model.subject,
           CreatedSubject,

@@ -24,6 +24,7 @@ pub fn app() {
 pub type Model {
   Model(
     subject: Option(process.Subject(Msg)),
+    refresh_interval: Int,
     port_list: List(api.PortItem),
     sort_criteria: api.PortSortCriteria,
     sort_direction: api.SortDirection,
@@ -34,6 +35,7 @@ pub type Model {
 
 fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
   let info = api.get_port_list()
+  let refresh_interval = common.get_refresh_interval(params)
   let default_sort_criteria = api.SortByPortInput
   let default_sort_direction = api.Descending
   let sorted = api.sort_port_list(info, default_sort_criteria, api.Descending)
@@ -59,18 +61,14 @@ fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
   #(
     Model(
       subject: option.None,
+      refresh_interval: refresh_interval,
       port_list: sorted,
       sort_criteria: default_sort_criteria,
       sort_direction: default_sort_direction,
       active_port:,
       details:,
     ),
-    common.emit_after(
-      common.refresh_interval,
-      Refresh,
-      option.None,
-      CreatedSubject,
-    ),
+    common.emit_after(refresh_interval, Refresh, option.None, CreatedSubject),
   )
 }
 
@@ -118,7 +116,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       #(
         do_refresh(model),
         common.emit_after(
-          common.refresh_interval,
+          model.refresh_interval,
           Refresh,
           model.subject,
           CreatedSubject,

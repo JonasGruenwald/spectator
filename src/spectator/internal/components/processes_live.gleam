@@ -26,6 +26,7 @@ pub fn app() {
 pub type Model {
   Model(
     subject: Option(process.Subject(Msg)),
+    refresh_interval: Int,
     process_list: List(api.ProcessItem),
     sort_criteria: api.ProcessSortCriteria,
     sort_direction: api.SortDirection,
@@ -60,11 +61,13 @@ fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
   let info = api.get_process_list()
   let default_sort_criteria = api.SortByReductions
   let default_sort_direction = api.Descending
+  let refresh_interval = common.get_refresh_interval(params)
   let sorted =
     api.sort_process_list(info, default_sort_criteria, api.Descending)
   #(
     Model(
       subject: option.None,
+      refresh_interval:,
       process_list: sorted,
       sort_criteria: default_sort_criteria,
       sort_direction: default_sort_direction,
@@ -74,12 +77,7 @@ fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
       state: option.None,
     ),
     effect.batch([
-      common.emit_after(
-        common.refresh_interval,
-        Refresh,
-        option.None,
-        CreatedSubject,
-      ),
+      common.emit_after(refresh_interval, Refresh, option.None, CreatedSubject),
       case common.get_param(params, "selected") {
         Error(_) -> effect.none()
         Ok(potential_pid) -> {
@@ -145,7 +143,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
           effect.batch([
             request_otp_details(p.pid, model.subject),
             common.emit_after(
-              common.refresh_interval,
+              model.refresh_interval,
               Refresh,
               model.subject,
               CreatedSubject,
@@ -155,7 +153,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         _ -> #(
           new_model,
           common.emit_after(
-            common.refresh_interval,
+            model.refresh_interval,
             Refresh,
             model.subject,
             CreatedSubject,

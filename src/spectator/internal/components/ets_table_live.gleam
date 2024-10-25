@@ -26,6 +26,7 @@ pub type Model {
   Model(
     // Relevant for table list
     subject: Option(process.Subject(Msg)),
+    refresh_interval: Int,
     table: Option(api.Table),
     table_data: Option(api.TableData),
     sort_column: Option(Int),
@@ -51,9 +52,11 @@ fn get_initial_data(params: common.Params) -> Result(Model, Nil) {
       get_ets_table_info_from_list(table_atom)
     }),
   )
+  let refresh_interval = common.get_refresh_interval(params)
   let table_data = api.get_ets_data(table) |> option.from_result
   Ok(Model(
     subject: None,
+    refresh_interval:,
     table: Some(table),
     table_data: table_data,
     sort_column: None,
@@ -65,9 +68,19 @@ fn init(params: common.Params) {
   case get_initial_data(params) {
     Ok(model) -> #(
       model,
-      common.emit_after(common.refresh_interval, Refresh, None, CreatedSubject),
+      common.emit_after(model.refresh_interval, Refresh, None, CreatedSubject),
     )
-    Error(_) -> #(Model(None, None, None, None, api.Descending), effect.none())
+    Error(_) -> #(
+      Model(
+        None,
+        common.refresh_interval_default,
+        None,
+        None,
+        None,
+        api.Descending,
+      ),
+      effect.none(),
+    )
   }
 }
 
@@ -91,7 +104,15 @@ fn do_refresh(model: Model) -> Model {
           Model(..model, table_data: Some(sorted))
         }
         Ok(data), None -> Model(..model, table_data: Some(data))
-        Error(_), _ -> Model(None, None, None, None, api.Descending)
+        Error(_), _ ->
+          Model(
+            None,
+            common.refresh_interval_default,
+            None,
+            None,
+            None,
+            api.Descending,
+          )
       }
     }
     _ -> model
@@ -103,7 +124,7 @@ fn update(model: Model, msg: Msg) {
     Refresh -> #(
       do_refresh(model),
       common.emit_after(
-        common.refresh_interval,
+        model.refresh_interval,
         Refresh,
         model.subject,
         CreatedSubject,

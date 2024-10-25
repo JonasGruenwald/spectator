@@ -25,23 +25,26 @@ pub type Model {
   Model(
     // Relevant for table list
     subject: Option(process.Subject(Msg)),
+    refresh_interval: Int,
     tables: List(api.Table),
     sort_criteria: api.TableSortCriteria,
     sort_direction: api.SortDirection,
   )
 }
 
-fn init(_) {
+fn init(params) {
   let defaul_sort_criteria = api.SortByTableSize
   let defaul_sort_direction = api.Descending
+  let refresh_interval = common.get_refresh_interval(params)
   #(
     Model(
       subject: None,
+      refresh_interval:,
       tables: get_sorted_tables(defaul_sort_criteria, defaul_sort_direction),
       sort_criteria: defaul_sort_criteria,
       sort_direction: defaul_sort_direction,
     ),
-    common.emit_after(common.refresh_interval, Refresh, None, CreatedSubject),
+    common.emit_after(refresh_interval, Refresh, None, CreatedSubject),
   )
 }
 
@@ -67,7 +70,7 @@ fn update(model: Model, msg: Msg) {
         tables: get_sorted_tables(model.sort_criteria, model.sort_direction),
       ),
       common.emit_after(
-        common.refresh_interval,
+        model.refresh_interval,
         Refresh,
         model.subject,
         CreatedSubject,
