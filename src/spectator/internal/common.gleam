@@ -56,8 +56,12 @@ pub fn get_param(params: Params, key: String) -> Result(String, Nil) {
   })
 }
 
-@external(erlang, "spectator_ffi", "format_percentage")
-pub fn format_percentage(value: Float) -> String
+@external(erlang, "spectator_ffi", "truncate_float")
+pub fn truncate_float(value: Float) -> String
+
+pub fn format_percentage(value: Float) -> String {
+  truncate_float(value) <> "%"
+}
 
 pub fn static_file(name: String) {
   let assert Ok(priv) = erlang.priv_directory("spectator")

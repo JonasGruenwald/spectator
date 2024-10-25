@@ -21,7 +21,7 @@
     port_from_string/1,
     get_memory_statistics/0,
     get_system_info/0,
-    format_percentage/1,
+    truncate_float/1,
     kill_process/1
 ]).
 
@@ -387,8 +387,8 @@ new_ets_table(Name) ->
 pid_to_string(Pid) ->
     list_to_bitstring(pid_to_list(Pid)).
 
-format_percentage(F) ->
-    list_to_bitstring(io_lib:format("~.2f%", [F])).
+truncate_float(F) ->
+    list_to_bitstring(io_lib:format("~.2f", [F])).
 
 port_to_string(Port) ->
     list_to_bitstring(port_to_list(Port)).

@@ -100,7 +100,7 @@ pub fn meter(value: Float) {
           #("x", "0px"),
           #("y", "0px"),
           #("height", meter_height <> "px"),
-          #("width", float.to_string(value) <> "px"),
+          #("width", common.truncate_float(value) <> "px"),
           #("fill", "var(--meter-bar)"),
         ]),
       ]),
