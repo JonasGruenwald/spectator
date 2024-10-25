@@ -7,13 +7,16 @@
 
 
 :root {
-  :root {
-    --text: #ffffff;
-    --muted: #595959;
-    --background: #2f2f2f;
-    --highlight: #584355;
-    --text-hightlight: #ffaff3;
-  }
+  /* Default Theme */
+  --text: #ffffff;
+  --muted: #595959;
+  --background: #2f2f2f;
+  --highlight: #584355;
+  --text-hightlight: #ffaff3;
+
+  /* General */
+  --unnamed-blue: #a6f0fc;
+  --meter-bar: #ffaff3;
 }
 
 @media (prefers-color-scheme: light) {
@@ -84,6 +87,7 @@ button:hover {
   font-weight: 100;
   align-items: flex-end;
   justify-content: space-between;
+  user-select: none;
 }
 
 .lucy-icon {
@@ -353,7 +357,7 @@ tbody tr.tagged.selected {
   text-align: right;
 }
 
-.otp-toggle {
+.panel-action {
   margin-left: auto;
   cursor: pointer;
 }
@@ -389,25 +393,66 @@ table.ets-data tbody tr:hover {
 
 /* Dashboard */
 
-.dashboard{
+.dashboard {
   padding: 10px;
 }
 
-.column-chart{
+.split {
+  display: flex;
+  gap: 100px;
+  width: 100%;
+}
+
+.split>div {
+  flex-basis: 50%;
+}
+
+.info-container {
+  border: 1px solid var(--text);
+}
+
+.info-item {
+  display: flex;
+}
+
+.info-item {
+  border-bottom: 1px solid var(--text);
+}
+
+.info-item:last-child {
+  border-bottom: 0;
+}
+
+.info-item>div {
+  flex-basis: 50%;
+  padding: 5px;
+}
+
+.info-label {
+  border-right: 1px solid var(--text);
+  text-align: right;
+}
+
+.column-chart,
+.meter-chart {
   padding: 2px;
   border: 1px solid var(--text);
 }
 
-.memory-breakdown{
+.memory-breakdown {
   display: flex;
   gap: 10px
 }
 
-.legend-item{
+.limit-item{
+  margin-bottom: 10px;
+}
+
+.legend-item {
   display: flex
 }
 
-.legend-colour{
+.legend-colour {
   width: 2em;
   height: 2em;
   margin-right: 10px;
@@ -416,6 +461,6 @@ table.ets-data tbody tr:hover {
   display: flex;
 }
 
-.legend-colour > div{
+.legend-colour>div {
   flex-grow: 1;
 }

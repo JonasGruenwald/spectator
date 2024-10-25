@@ -1,4 +1,3 @@
-import chrobot
 import gleam/erlang/atom
 import gleam/erlang/process
 import gleam/int
@@ -58,6 +57,7 @@ pub fn main() {
   let assert Ok(table3) =
     api.new_ets_table(atom.create_from_string("Wibble Wooble"))
   process.start(fn() { keep_adding_to_table(table3, 1) }, False)
+  |> spectator.tag("Rogue ETS Process")
 
   // Start another OTP actor and tag it for spectator
   // let assert Ok(_browser) =

@@ -10,7 +10,7 @@ import simplifile
 
 pub const message_queue_threshold = 10
 
-pub const refresh_interval = 500
+pub const refresh_interval = 1000
 
 pub const colour_process = "#EF5976"
 
@@ -20,9 +20,9 @@ pub const colour_ets = "#ECE27C"
 
 pub const colour_atom = "#95EA8C"
 
-pub const colour_binary = "#B498F6"
+pub const colour_binary = "#91D0DA"
 
-pub const colour_other = "#91D0DA"
+pub const colour_other = "#B498F6"
 
 pub type Params =
   List(#(String, String))
@@ -55,6 +55,9 @@ pub fn get_param(params: Params, key: String) -> Result(String, Nil) {
     }
   })
 }
+
+@external(erlang, "spectator_ffi", "format_percentage")
+pub fn format_percentage(value: Float) -> String
 
 pub fn static_file(name: String) {
   let assert Ok(priv) = erlang.priv_directory("spectator")

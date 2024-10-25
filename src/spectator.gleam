@@ -73,10 +73,10 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
             |> response.set_body(mist.Bytes(bytes_builder.new()))
           })
         }
-        // Redirect to processes by default
+        // Redirect to dashboard by default
         [] -> {
           response.new(302)
-          |> response.prepend_header("location", "/processes")
+          |> response.prepend_header("location", "/dashboard")
           |> response.set_body(empty_body)
         }
 

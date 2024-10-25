@@ -1,29 +1,17 @@
 import gleam/float
-import gleam/int
 import gleam/list
-import gleam/string
 import lustre/attribute.{attribute}
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/element/svg
+import spectator/internal/common
 
 const column_chart_height = "100"
 
+const meter_height = "25"
+
 pub type ChartSegment {
   ChartSegment(colour: String, label: String, value: Float)
-}
-
-fn format_percentage(value: Float) -> String {
-  case
-    float.to_string(value)
-    |> string.split(".")
-  {
-    [whole, decimal] -> {
-      let decimal = string.slice(decimal, 0, 2)
-      whole <> "." <> decimal <> "%"
-    }
-    _ -> "0%"
-  }
 }
 
 fn map_segments_with_offset(
@@ -43,7 +31,9 @@ fn map_segments_with_offset(
             "http://www.w3.org/2000/svg",
             "rect",
             [
-              attribute.title(s.label <> " " <> format_percentage(s.value)),
+              attribute.title(
+                s.label <> " " <> common.format_percentage(s.value),
+              ),
               attribute.style([
                 #("x", float.to_string(offset) <> "px"),
                 #("y", "0px"),
@@ -54,7 +44,7 @@ fn map_segments_with_offset(
             ],
             [
               svg.title([], [
-                html.text(s.label <> " " <> format_percentage(s.value)),
+                html.text(s.label <> " " <> common.format_percentage(s.value)),
               ]),
             ],
           ),
@@ -66,6 +56,8 @@ fn map_segments_with_offset(
   }
 }
 
+/// This column chart assumes that the sum of the values is 100
+/// (percentage based data)
 pub fn column_chart(segments: List(ChartSegment)) {
   html.svg(
     [
@@ -89,4 +81,29 @@ pub fn legend_item(label: String, color: String, value: Element(a)) {
       value,
     ]),
   ])
+}
+
+/// This meter assumes that the max value is 100
+/// (percentage based data)
+pub fn meter(value: Float) {
+  html.svg(
+    [
+      attribute.class("meter-chart"),
+      attribute("viewBox", "0 0 100 " <> meter_height),
+      attribute("height", meter_height <> "px"),
+      attribute("width", "100%"),
+      attribute("preserveAspectRatio", "none"),
+    ],
+    [
+      svg.rect([
+        attribute.style([
+          #("x", "0px"),
+          #("y", "0px"),
+          #("height", meter_height <> "px"),
+          #("width", float.to_string(value) <> "px"),
+          #("fill", "var(--meter-bar)"),
+        ]),
+      ]),
+    ],
+  )
 }

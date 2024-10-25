@@ -217,6 +217,25 @@ pub type MemoryStatistics {
   )
 }
 
+pub type SystemInfo {
+  SystemInfo(
+    uptime: String,
+    architecure: String,
+    erts_version: String,
+    otp_release: String,
+    schedulers: Int,
+    schedulers_online: Int,
+    atom_count: Int,
+    atom_limit: Int,
+    ets_count: Int,
+    ets_limit: Int,
+    port_count: Int,
+    port_limit: Int,
+    process_count: Int,
+    process_limit: Int,
+  )
+}
+
 // ------ SORTING
 
 pub fn invert_sort_direction(direction: SortDirection) -> SortDirection {
@@ -632,6 +651,9 @@ pub fn format_port(port: port.Port) -> String
 
 // ------- SYSTEM INTERACTION
 
+@external(erlang, "spectator_ffi", "kill_process")
+pub fn kill_process(pid: process.Pid) -> Nil
+
 @external(erlang, "sys", "suspend")
 pub fn suspend(pid: process.Pid) -> Nil
 
@@ -686,6 +708,9 @@ pub fn compare_dynamic_data(
 
 @external(erlang, "spectator_ffi", "get_word_size")
 pub fn get_word_size() -> Int
+
+@external(erlang, "spectator_ffi", "get_system_info")
+pub fn get_system_info() -> Result(SystemInfo, Nil)
 
 // ------- TAG MANAGER GEN_SERVER
 
