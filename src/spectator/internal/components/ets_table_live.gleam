@@ -63,7 +63,6 @@ fn get_initial_data(params: common.Params) -> Result(Model, Nil) {
 }
 
 fn init(params: common.Params) {
-  io.debug(params)
   case get_initial_data(params) {
     Ok(model) -> #(
       model,
