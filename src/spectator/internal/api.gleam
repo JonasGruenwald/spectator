@@ -11,6 +11,18 @@ import gleam/order
 import gleam/result
 import gleam/string
 import gleam/uri
+import logging.{log}
+
+pub type ErlangNode =
+  Option(atom.Atom)
+
+pub type ErlangError {
+  ErpcError(reason: atom.Atom)
+  NotSupportedError
+  BadArgumentError
+  ReturnedUndefinedError
+  DynamicError(reason: dynamic.Dynamic)
+}
 
 /// A tuple from Erlang that could be any size.
 /// Used to represent ETS table data as it is not guaranteed to have a uniform number of columns.
@@ -511,43 +523,63 @@ pub fn sort_port_list(
 
 // -------[PROCESS LIST]
 
-pub fn get_process_list() -> List(ProcessItem) {
-  list_processes()
-  |> list.filter_map(fn(pid) {
-    case get_process_info(pid) {
-      Error(e) -> Error(e)
-      Ok(info) -> Ok(ProcessItem(pid, info))
+pub fn get_process_list(n: ErlangNode) -> List(ProcessItem) {
+  case list_processes(n) {
+    Ok(pids) -> {
+      list.filter_map(pids, fn(pid) {
+        case get_process_info(n, pid) {
+          Error(e) -> Error(e)
+          Ok(info) -> Ok(ProcessItem(pid, info))
+        }
+      })
     }
-  })
+    Error(e) -> {
+      log(
+        logging.Alert,
+        "Failed to list processes, error: " <> string.inspect(e),
+      )
+      []
+    }
+  }
 }
 
-@external(erlang, "erlang", "processes")
-pub fn list_processes() -> List(process.Pid)
+@external(erlang, "spectator_ffi", "list_processes")
+pub fn list_processes(
+  node: ErlangNode,
+) -> Result(List(process.Pid), ErlangError)
 
 @external(erlang, "spectator_ffi", "get_process_info")
 pub fn get_process_info(
+  node: ErlangNode,
   pid: process.Pid,
-) -> Result(ProcessInfo, dynamic.Dynamic)
+) -> Result(ProcessInfo, ErlangError)
 
 // -------[PROCESS DETAILS]
 
 @external(erlang, "spectator_ffi", "get_details")
-pub fn get_details(pid: process.Pid) -> Result(ProcessDetails, dynamic.Dynamic)
+pub fn get_details(
+  node: ErlangNode,
+  pid: process.Pid,
+) -> Result(ProcessDetails, ErlangError)
 
 // -------[OTP PROCESS DETAILS]
 
-pub fn request_otp_data(p: process.Pid, callback: fn(OtpDetails) -> Nil) {
+pub fn request_otp_data(
+  node: ErlangNode,
+  proc: process.Pid,
+  callback: fn(OtpDetails) -> Nil,
+) {
   process.start(
     fn() {
-      case get_status(p, 100) {
+      case get_status(node, proc, 100) {
         Error(_) -> {
           Nil
         }
         Ok(status) -> {
           let state =
-            get_state(p, 100)
+            get_state(node, proc, 100)
             |> result.unwrap(dynamic.from(option.None))
-          callback(OtpDetails(pid: p, status:, state:))
+          callback(OtpDetails(pid: proc, status:, state:))
         }
       }
     },
@@ -557,20 +589,22 @@ pub fn request_otp_data(p: process.Pid, callback: fn(OtpDetails) -> Nil) {
 
 @external(erlang, "spectator_ffi", "get_status")
 pub fn get_status(
+  node: ErlangNode,
   pid: process.Pid,
   timeout: Int,
-) -> Result(ProcessOtpStatus, dynamic.Dynamic)
+) -> Result(ProcessOtpStatus, ErlangError)
 
 @external(erlang, "spectator_ffi", "get_state")
 pub fn get_state(
+  node: ErlangNode,
   pid: process.Pid,
   timeout: Int,
-) -> Result(dynamic.Dynamic, dynamic.Dynamic)
+) -> Result(dynamic.Dynamic, ErlangError)
 
 // -------[ETS]
 
-pub fn get_ets_data(table: Table) {
-  use raw_data <- result.try(get_raw_ets_data(table.id))
+pub fn get_ets_data(node: ErlangNode, table: Table) {
+  use raw_data <- result.try(get_raw_ets_data(node, table.id))
   process_raw_ets_data(raw_data, [], 0)
 }
 
@@ -578,7 +612,7 @@ fn process_raw_ets_data(
   remainder: List(List(OpaqueTuple)),
   accumulator: List(List(dynamic.Dynamic)),
   max_length: Int,
-) -> Result(TableData, Nil) {
+) -> Result(TableData, ErlangError) {
   case remainder {
     [] -> {
       Ok(TableData(content: accumulator, max_length: max_length))
@@ -592,50 +626,63 @@ fn process_raw_ets_data(
       )
     }
     _ -> {
-      Error(Nil)
+      Error(BadArgumentError)
     }
   }
 }
 
 @external(erlang, "spectator_ffi", "list_ets_tables")
-pub fn list_ets_tables() -> Result(List(Table), Nil)
+pub fn list_ets_tables(node: ErlangNode) -> Result(List(Table), ErlangError)
 
 @external(erlang, "spectator_ffi", "get_ets_table_info")
-pub fn get_ets_table_info(name: atom.Atom) -> Result(Table, Nil)
+pub fn get_ets_table_info(
+  node: ErlangNode,
+  name: atom.Atom,
+) -> Result(Table, ErlangError)
 
 @external(erlang, "spectator_ffi", "get_ets_data")
 pub fn get_raw_ets_data(
+  node: ErlangNode,
   table: erlang.Reference,
-) -> Result(List(List(OpaqueTuple)), Nil)
+) -> Result(List(List(OpaqueTuple)), ErlangError)
 
 @external(erlang, "spectator_ffi", "opaque_tuple_to_list")
 pub fn opaque_tuple_to_list(tuple: OpaqueTuple) -> List(dynamic.Dynamic)
 
 // -------[PORTS]
 
-pub fn get_port_list() -> List(PortItem) {
-  list_ports()
+pub fn get_port_list(node: ErlangNode) -> List(PortItem) {
+  list_ports(node)
+  |> result.unwrap([])
   |> list.filter_map(fn(pid) {
-    case get_port_info(pid) {
+    case get_port_info(node, pid) {
       Error(e) -> Error(e)
       Ok(info) -> Ok(PortItem(pid, info))
     }
   })
 }
 
-@external(erlang, "erlang", "ports")
-pub fn list_ports() -> List(port.Port)
+@external(erlang, "spectator_ffi", "list_ports")
+pub fn list_ports(node: ErlangNode) -> Result(List(port.Port), ErlangError)
 
 @external(erlang, "spectator_ffi", "get_port_info")
-pub fn get_port_info(port: port.Port) -> Result(PortInfo, dynamic.Dynamic)
+pub fn get_port_info(
+  node: ErlangNode,
+  port: port.Port,
+) -> Result(PortInfo, ErlangError)
 
 @external(erlang, "spectator_ffi", "get_port_details")
-pub fn get_port_details(port: port.Port) -> Result(PortDetails, dynamic.Dynamic)
+pub fn get_port_details(
+  node: ErlangNode,
+  port: port.Port,
+) -> Result(PortDetails, ErlangError)
 
 // ------- [SYSTEM STATISTICS]
 
 @external(erlang, "spectator_ffi", "get_memory_statistics")
-pub fn get_memory_statistics() -> Result(MemoryStatistics, dynamic.Dynamic)
+pub fn get_memory_statistics(
+  node: ErlangNode,
+) -> Result(MemoryStatistics, ErlangError)
 
 // ------ FORMATTING
 
@@ -652,19 +699,28 @@ pub fn format_port(port: port.Port) -> String
 // ------- SYSTEM INTERACTION
 
 @external(erlang, "spectator_ffi", "kill_process")
-pub fn kill_process(pid: process.Pid) -> Nil
+pub fn kill_process(
+  node: ErlangNode,
+  pid: process.Pid,
+) -> Result(Bool, ErlangError)
 
-@external(erlang, "sys", "suspend")
-pub fn suspend(pid: process.Pid) -> Nil
+@external(erlang, "spectator_ffi", "sys_suspend")
+pub fn suspend(
+  node: ErlangNode,
+  pid: process.Pid,
+) -> Result(dynamic.Dynamic, ErlangError)
 
-@external(erlang, "sys", "resume")
-pub fn resume(pid: process.Pid) -> Nil
-
-@external(erlang, "ets", "insert")
-pub fn ets_insert(table: atom.Atom, tuple: List(#(k, v))) -> Nil
+@external(erlang, "spectator_ffi", "sys_resume")
+pub fn resume(
+  node: ErlangNode,
+  pid: process.Pid,
+) -> Result(dynamic.Dynamic, ErlangError)
 
 @external(erlang, "spectator_ffi", "new_ets_table")
-pub fn new_ets_table(name: atom.Atom) -> Result(atom.Atom, Nil)
+pub fn new_ets_table(
+  node: ErlangNode,
+  name: atom.Atom,
+) -> Result(atom.Atom, ErlangError)
 
 @external(erlang, "spectator_ffi", "pid_to_string")
 fn pid_to_string(pid: process.Pid) -> String
@@ -707,10 +763,10 @@ pub fn compare_dynamic_data(
 ) -> order.Order
 
 @external(erlang, "spectator_ffi", "get_word_size")
-pub fn get_word_size() -> Int
+pub fn get_word_size(node: ErlangNode) -> Result(Int, ErlangError)
 
 @external(erlang, "spectator_ffi", "get_system_info")
-pub fn get_system_info() -> Result(SystemInfo, Nil)
+pub fn get_system_info(node: ErlangNode) -> Result(SystemInfo, ErlangError)
 
 // ------- TAG MANAGER GEN_SERVER
 
