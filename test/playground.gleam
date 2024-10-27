@@ -1,3 +1,4 @@
+import carpenter/table
 import gleam/erlang/atom
 import gleam/erlang/process
 import spectator
@@ -33,6 +34,14 @@ pub fn main() {
     atom.create_from_string("process"),
     atom.create_from_string("registered_actor"),
   )
+
+  //  Create some tables
+  let assert Ok(t1) =
+    table.build("https://table-is-not-urlsafe/lol.com?query=1")
+    |> table.set
+
+  t1
+  |> table.insert([#("hello", "joe")])
 
   // let assert Ok(_) = chrobot.open(browser, "http://127.0.0.1:3000/processes/", 5_000)
   // Sleep on the main process so the program doesn't exit

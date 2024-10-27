@@ -1,6 +1,8 @@
 import gleam/bytes_builder
 import gleam/dynamic
 import gleam/erlang
+import gleam/erlang/atom
+import gleam/erlang/node
 import gleam/erlang/process
 import gleam/http
 import gleam/http/request.{type Request}
@@ -12,6 +14,9 @@ import gleam/option
 import gleam/otp/actor
 import gleam/otp/static_supervisor as sup
 import gleam/result
+import gleam/string
+import gleam/uri
+import logging
 import lustre
 import lustre/attribute
 import lustre/element
@@ -26,6 +31,12 @@ import spectator/internal/components/ets_table_live
 import spectator/internal/components/ports_live
 import spectator/internal/components/processes_live
 import spectator/internal/views/navbar
+
+/// Run spectator from the command line.
+/// This will start the spectator application on port 3000.
+pub fn main() {
+  todo
+}
 
 fn start_server(port: Int) -> Result(process.Pid, Nil) {
   // Start mist server
@@ -53,7 +64,7 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
           connect_server_component(req, ets_overview_live.app, query_params)
         ["ets-feed", table] ->
           connect_server_component(req, ets_table_live.app, [
-            #("table_name", table),
+            #("table_name", uri.percent_decode(table) |> result.unwrap("")),
             ..query_params
           ])
         ["port-feed"] ->
@@ -96,6 +107,8 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
         <> address
         <> ":"
         <> int.to_string(port)
+        <> " - Node: "
+        <> atom.to_string(node.self() |> node.to_atom())
       io.println(message)
     })
     |> mist.port(port)
@@ -159,6 +172,43 @@ pub fn tag_result(
   }
 }
 
+fn validate_node_connection(params: common.Params) -> Result(Nil, Nil) {
+  let node_res = common.get_param(params, "node")
+  case node_res {
+    // No node passed, that's fine, we'll just use the local node
+    Error(_) -> Ok(Nil)
+    Ok(node) -> {
+      let node_atom = atom.create_from_string(node)
+      // Try setting the cookie if one is passed,
+      // but proceed regardless of the outcome
+      case common.get_param(params, "cookie") {
+        Error(_) -> Nil
+        Ok(cookie) -> {
+          let cookie_atom = atom.create_from_string(cookie)
+          case api.set_cookie(node_atom, cookie_atom) {
+            True -> Nil
+            False -> {
+              logging.log(
+                logging.Warning,
+                "Failed to set cookie for the passed node "
+                  <> node
+                  <> " will try to connect regardless.",
+              )
+              Nil
+            }
+          }
+        }
+      }
+      // Connect to the passed node
+      // If this fails, we should not proceed
+      case api.hidden_connect_node(node_atom) {
+        True -> Ok(Nil)
+        False -> Error(Nil)
+      }
+    }
+  }
+}
+
 fn render_server_component(
   title: String,
   server_component_path path: String,
@@ -166,27 +216,56 @@ fn render_server_component(
 ) {
   let res = response.new(200)
   let styles = common.static_file("styles.css")
-  let html =
-    html([], [
-      html.head([], [
-        html.title([], title),
-        server_component.script(),
-        html.link([
-          attribute.rel("icon"),
-          attribute.href("/favicon.svg"),
-          attribute.type_("image/svg+xml"),
+  let html = case validate_node_connection(params) {
+    Ok(_) -> {
+      html([], [
+        html.head([], [
+          html.title([], title),
+          server_component.script(),
+          html.link([
+            attribute.rel("icon"),
+            attribute.href("/favicon.svg"),
+            attribute.type_("image/svg+xml"),
+          ]),
+          html.style([], styles),
         ]),
-        html.style([], styles),
-      ]),
-      html.body([], [
-        navbar.render(title),
-        element.element(
-          "lustre-server-component",
-          [server_component.route("/" <> path <> common.encode_params(params))],
-          [],
-        ),
-      ]),
-    ])
+        html.body([], [
+          navbar.render(title),
+          element.element(
+            "lustre-server-component",
+            [
+              server_component.route(
+                "/" <> path <> common.encode_params(params),
+              ),
+            ],
+            [],
+          ),
+        ]),
+      ])
+    }
+    Error(_) -> {
+      html([], [
+        html.head([], [
+          html.title([], title),
+          server_component.script(),
+          html.link([
+            attribute.rel("icon"),
+            attribute.href("/favicon.svg"),
+            attribute.type_("image/svg+xml"),
+          ]),
+          html.style([], styles),
+        ]),
+        html.body([], [
+          navbar.render(title),
+          html.div([attribute.class("component-error")], [
+            html.text(
+              "Node connection failed! Please verify that the configured node and cookie are correct.",
+            ),
+          ]),
+        ]),
+      ])
+    }
+  }
   response.set_body(
     res,
     html

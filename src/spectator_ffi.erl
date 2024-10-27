@@ -26,7 +26,8 @@
     get_memory_statistics/1,
     get_system_info/1,
     truncate_float/1,
-    kill_process/2
+    kill_process/2,
+    set_cookie/2
 ]).
 
 % ---------------------------------------------------
@@ -546,6 +547,9 @@ uptime_string(NodeOption) ->
 
 pid_to_string(Pid) ->
     list_to_bitstring(pid_to_list(Pid)).
+
+set_cookie(Node, Cookie) ->
+  to_result(fun() -> erlang:set_cookie(Node, Cookie) end).
 
 truncate_float(F) ->
     list_to_bitstring(io_lib:format("~.2f", [F])).

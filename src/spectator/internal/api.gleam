@@ -778,3 +778,14 @@ pub fn add_tag(pid: process.Pid, tag: String) -> Nil
 
 @external(erlang, "spectator_tag_manager", "get_tag")
 pub fn get_tag(pid: process.Pid) -> Option(String)
+
+// ------- DISTRIBUTION
+
+@external(erlang, "net_kernel", "hidden_connect_node")
+pub fn hidden_connect_node(node: atom.Atom) -> Bool
+
+@external(erlang, "net_kernel", "connect_node")
+pub fn connect_node(node: atom.Atom) -> Bool
+
+@external(erlang, "spectator_ffi", "set_cookie")
+pub fn set_cookie(node: atom.Atom, cookie: atom.Atom) -> Bool

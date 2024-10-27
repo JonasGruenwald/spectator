@@ -6,7 +6,7 @@ Spectator is a BEAM observer tool written in Gleam, that plays well with gleam_o
 
 ![](https://raw.githubusercontent.com/JonasGruenwald/spectator/refs/heads/main/priv/screenshot.png)
 
-## Note
+## Features
 
 This is a work in progress, so far it has the following features:
 
@@ -67,5 +67,19 @@ pub fn main() {
   process.sleep_forever()
 }
 ```
+
+## Considerations
+
+Please be aware of the following implications of running spectator:
+
+* **Spectator may slow down your system**  
+  All displayed processes are probed in the configured interval using Erlang's `process_info/2` function which puts a temporary lock on the process being infoed. If the process is handling a lot of messages, this may have performance implications for the system
+* **Spectator will send system messages to selected processes**  
+  In order to get a selected processes OTP state, spectator needs to send it system messages. If you select a process that is not handling these messages properly, spectator may fill up its message queue, as it is sending a new message every tick in the configured interval. If the processes message queue is over a certain size, spectator will stop sending new messages, however the process may never handle the already queued up messages
+* **Spectator will create atoms dynamically**  
+  When connecting to other Erlang nodes, spectator needs to convert the node name and cookie you set to atoms, in order to connect. Therefore it is possible to exhaust the memory of the BEAM instance running spectator using its user interface, as atoms are never garbage collected.
+
+
+----
 
 Further documentation can be found at <https://hexdocs.pm/spectator>.

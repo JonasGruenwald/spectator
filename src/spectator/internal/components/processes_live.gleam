@@ -1,3 +1,4 @@
+import gleam/io
 import gleam/dynamic
 import gleam/erlang/atom
 import gleam/erlang/process
@@ -61,6 +62,7 @@ fn request_otp_details(
 }
 
 fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
+  io.debug(params)
   let info =
     api.get_process_list(
       // TODO USE NODE

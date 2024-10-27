@@ -193,7 +193,7 @@ fn view(model: Model) -> Element(Msg) {
 fn render_table_data(model: Model, table: api.Table, data: api.TableData) {
   case data.max_length == 0 {
     True ->
-      html.div([attribute.class("ets-table-error")], [
+      html.div([attribute.class("component-error")], [
         html.text("No data in table "),
         display.atom(table.name),
       ])

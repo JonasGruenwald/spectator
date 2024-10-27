@@ -29,29 +29,17 @@ pub type Params =
   List(#(String, String))
 
 pub fn encode_params(params: Params) -> String {
-  let pair = fn(t: #(String, String)) {
-    string_builder.from_strings([
-      uri.percent_encode(t.0),
-      "=",
-      uri.percent_encode(t.1),
-    ])
-  }
-  case params {
-    [] -> ""
-    _ ->
-      params
-      |> list.map(pair)
-      |> list.intersperse(string_builder.from_string("&"))
-      |> string_builder.concat
-      |> string_builder.prepend("?")
-      |> string_builder.to_string
-  }
+  "?" <> uri.query_to_string(params)
+}
+
+pub fn add_param(params: Params, key: String, value: String) -> Params {
+  [#(key, value), ..params]
 }
 
 pub fn get_param(params: Params, key: String) -> Result(String, Nil) {
   list.find_map(params, fn(p) {
     case p {
-      #(k, v) if k == key -> uri.percent_decode(v)
+      #(k, v) if k == key -> Ok(v)
       _ -> Error(Nil)
     }
   })
