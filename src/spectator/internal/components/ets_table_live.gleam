@@ -36,24 +36,43 @@ pub type Model {
 
 /// Sometimes we can't get the table info from an atom directly
 /// so we fall back to the slower list lookup here
-fn get_ets_table_info_from_list(table_name: atom.Atom) {
-  use tables <- result.try(api.list_ets_tables())
+fn get_ets_table_info_from_list(node: api.ErlangNode, table_name: atom.Atom) {
+  use tables <- result.try(api.list_ets_tables(node))
   list.find(tables, fn(t) { t.name == table_name })
-  |> result.replace_error(Nil)
+  |> result.replace_error(api.ReturnedUndefinedError)
 }
 
-fn get_initial_data(params: common.Params) -> Result(Model, Nil) {
-  use table_name <- result.try(common.get_param(params, "table_name"))
+fn get_initial_data(params: common.Params) -> Result(Model, api.ErlangError) {
+  use table_name <- result.try(
+    common.get_param(params, "table_name")
+    |> result.replace_error(api.ReturnedUndefinedError),
+  )
   use table_atom <- result.try(
-    atom.from_string(table_name) |> result.replace_error(Nil),
+    atom.from_string(table_name)
+    |> result.replace_error(api.ReturnedUndefinedError),
   )
-  use table <- result.try(
-    result.lazy_or(api.get_ets_table_info(table_atom), fn() {
-      get_ets_table_info_from_list(table_atom)
-    }),
-  )
+  use table <- result.try(result.lazy_or(
+    api.get_ets_table_info(
+      // TODO USE NODE
+      None,
+      table_atom,
+    ),
+    fn() {
+      get_ets_table_info_from_list(
+        // TODO USE NODE
+        None,
+        table_atom,
+      )
+    },
+  ))
   let refresh_interval = common.get_refresh_interval(params)
-  let table_data = api.get_ets_data(table) |> option.from_result
+  let table_data =
+    api.get_ets_data(
+      // TODO USE NODE 
+      None,
+      table,
+    )
+    |> option.from_result
   Ok(Model(
     subject: None,
     refresh_interval:,
@@ -95,7 +114,14 @@ pub opaque type Msg {
 fn do_refresh(model: Model) -> Model {
   case model.table {
     Some(t) -> {
-      case api.get_ets_data(t), model.sort_column {
+      case
+        api.get_ets_data(
+          // TODO USE NODE
+          None,
+          t,
+        ),
+        model.sort_column
+      {
         Ok(data), Some(sort_column_index) -> {
           // see it, say it,
           let sorted =

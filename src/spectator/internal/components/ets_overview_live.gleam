@@ -27,6 +27,7 @@ pub type Model {
     subject: Option(process.Subject(Msg)),
     refresh_interval: Int,
     tables: List(api.Table),
+    word_size: Int,
     sort_criteria: api.TableSortCriteria,
     sort_direction: api.SortDirection,
   )
@@ -36,11 +37,20 @@ fn init(params) {
   let defaul_sort_criteria = api.SortByTableSize
   let defaul_sort_direction = api.Descending
   let refresh_interval = common.get_refresh_interval(params)
+  let word_size =
+    result.unwrap(
+      api.get_word_size(
+        // TODO USE NODE
+        None,
+      ),
+      8,
+    )
   #(
     Model(
       subject: None,
       refresh_interval:,
       tables: get_sorted_tables(defaul_sort_criteria, defaul_sort_direction),
+      word_size:,
       sort_criteria: defaul_sort_criteria,
       sort_direction: defaul_sort_direction,
     ),
@@ -53,12 +63,17 @@ fn init(params) {
 pub opaque type Msg {
   Refresh
   HeadingClicked(api.TableSortCriteria)
-  // TableClicked(api.Table)
   CreatedSubject(process.Subject(Msg))
 }
 
 fn get_sorted_tables(sort_criteria, sort_direction) -> List(api.Table) {
-  result.unwrap(api.list_ets_tables(), [])
+  result.unwrap(
+    api.list_ets_tables(
+      // TODO USE NODE
+      None,
+    ),
+    [],
+  )
   |> api.sort_table_list(sort_criteria, sort_direction)
 }
 
@@ -204,7 +219,7 @@ fn view(model: Model) -> Element(Msg) {
           ),
           html.td(
             [attribute.class("cell-right link-cell")],
-            link_cell(t, [display.storage_words(t.memory)]),
+            link_cell(t, [display.storage_words(t.memory, model.word_size)]),
           ),
           html.td([attribute.class("cell-right link-cell")], [
             display.system_primitive(t.owner),

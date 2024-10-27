@@ -118,12 +118,22 @@ fn get_relative_system_limits(input: api.SystemInfo) {
 }
 
 fn do_refresh(model: Model) -> Model {
-  let memory_stats = api.get_memory_statistics() |> option.from_result
+  let memory_stats =
+    api.get_memory_statistics(
+      // TODO USE NODE
+      None,
+    )
+    |> option.from_result
   let memory_relative = case memory_stats {
     None -> None
     Some(stats) -> Some(get_relative_memory_stats(stats))
   }
-  let system_info = api.get_system_info() |> option.from_result
+  let system_info =
+    api.get_system_info(
+      // TODO USE NODE
+      None,
+    )
+    |> option.from_result
   let system_limits = case system_info {
     None -> None
     Some(info) -> Some(get_relative_system_limits(info))

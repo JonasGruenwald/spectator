@@ -144,12 +144,11 @@ pub fn atom(a: atom.Atom) {
 }
 
 pub fn reference(ref: erlang.Reference) {
-  // TODO: Implement inspect for Reference via FFI
   html.text(string.inspect(ref))
 }
 
-pub fn storage_words(words: Int) {
-  storage(words * api.get_word_size())
+pub fn storage_words(words: Int, word_size: Int) {
+  storage(words * word_size)
 }
 
 pub fn storage(size: Int) {

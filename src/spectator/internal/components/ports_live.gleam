@@ -34,7 +34,11 @@ pub type Model {
 }
 
 fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
-  let info = api.get_port_list()
+  let info =
+    api.get_port_list(
+      // TODO USE NODE
+      None,
+    )
   let refresh_interval = common.get_refresh_interval(params)
   let default_sort_criteria = api.SortByPortInput
   let default_sort_direction = api.Descending
@@ -45,14 +49,27 @@ fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
       use port_id <- option.then(
         api.decode_port(raw_port_id) |> option.from_result,
       )
-      use info <- option.then(api.get_port_info(port_id) |> option.from_result)
+      use info <- option.then(
+        api.get_port_info(
+          // TODO USE NODE
+          None,
+          port_id,
+        )
+        |> option.from_result,
+      )
       Some(api.PortItem(port_id:, info:))
     }
   }
   let details = case active_port {
     None -> None
     Some(ap) -> {
-      case api.get_port_details(ap.port_id) {
+      case
+        api.get_port_details(
+          // TODO USE NODE
+          None,
+          ap.port_id,
+        )
+      {
         Ok(details) -> Some(details)
         Error(_) -> None
       }
@@ -82,14 +99,24 @@ pub opaque type Msg {
 }
 
 fn do_refresh(model: Model) -> Model {
-  let info = api.get_port_list()
+  let info =
+    api.get_port_list(
+      // TODO USE NODE
+      None,
+    )
   let sorted =
     api.sort_port_list(info, model.sort_criteria, model.sort_direction)
 
   let active_port = case model.active_port {
     None -> None
     Some(active_port) -> {
-      case api.get_port_info(active_port.port_id) {
+      case
+        api.get_port_info(
+          // TODO USE NODE
+          None,
+          active_port.port_id,
+        )
+      {
         Ok(info) -> Some(api.PortItem(active_port.port_id, info))
         Error(_) -> None
       }
@@ -99,7 +126,13 @@ fn do_refresh(model: Model) -> Model {
   let details = case active_port {
     None -> None
     Some(ap) -> {
-      case api.get_port_details(ap.port_id) {
+      case
+        api.get_port_details(
+          // TODO USE NODE
+          None,
+          ap.port_id,
+        )
+      {
         Ok(details) -> {
           Some(details)
         }
