@@ -207,9 +207,7 @@ fn connect_server_component(
     let self = process.new_subject()
     let app = lustre_application()
     let assert Ok(live_component) = lustre.start_actor(app, params)
-
     tag_subject(live_component, "__spectator_internal Server Component")
-
     process.send(
       live_component,
       server_component.subscribe(
