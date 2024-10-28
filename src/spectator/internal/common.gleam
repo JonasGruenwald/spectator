@@ -3,7 +3,6 @@ import gleam/erlang/process
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
-import gleam/string_builder
 import gleam/uri
 import lustre/effect
 import lustre/server_component
@@ -36,12 +35,16 @@ pub fn encode_params(params: Params) -> String {
 }
 
 pub fn add_param(params: Params, key: String, value: String) -> Params {
-  [#(key, value), ..params]
+  case value {
+    "" -> params
+    _ -> [#(key, value), ..params]
+  }
 }
 
 pub fn get_param(params: Params, key: String) -> Result(String, Nil) {
   list.find_map(params, fn(p) {
     case p {
+      #(k, "") if k == key -> Error(Nil)
       #(k, v) if k == key -> Ok(v)
       _ -> Error(Nil)
     }

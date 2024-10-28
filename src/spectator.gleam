@@ -16,7 +16,6 @@ import gleam/otp/actor
 import gleam/otp/static_supervisor as sup
 import gleam/result
 import gleam/uri
-import logging
 import lustre
 import lustre/attribute
 import lustre/element
@@ -32,10 +31,11 @@ import spectator/internal/components/ports_live
 import spectator/internal/components/processes_live
 import spectator/internal/views/navbar
 
-/// Run spectator from the command line.
-/// This will start the spectator application on port 3000.
+/// Entrypoint for running spectator from the command line.
+/// This will start the spectator application on port 3000 and never return.
 pub fn main() {
-  todo
+  let assert Ok(_) = start()
+  process.sleep_forever()
 }
 
 fn start_server(port: Int) -> Result(process.Pid, Nil) {
@@ -121,8 +121,7 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
       tag(server_pid, "__spectator_internal Server")
       Ok(server_pid)
     }
-    Error(e) -> {
-      io.debug(#("Failed to start spectator mist server ", e))
+    Error(_e) -> {
       Error(Nil)
     }
   }
@@ -180,13 +179,12 @@ type NodeConnectionError {
 
 fn validate_node_connection(
   params: common.Params,
-) -> Result(Nil, NodeConnectionError) {
+) -> Result(String, NodeConnectionError) {
   let node_res = common.get_param(params, "node")
-
   case node_res {
     // No node passed, that's fine, we'll just use the local node
     // no other checks are needed
-    Error(_) -> Ok(Nil)
+    Error(_) -> Ok("")
     Ok(node) -> {
       let self = node.self() |> node.to_atom()
       use <- bool.guard(
@@ -214,7 +212,7 @@ fn validate_node_connection(
         !api.hidden_connect_node(node_atom),
         Error(FailedToConnectError),
       )
-      Ok(Nil)
+      Ok("🟢 " <> atom.to_string(node_atom))
     }
   }
 }
@@ -227,11 +225,12 @@ fn render_server_component(
   let res = response.new(200)
   let styles = common.static_file("styles.css")
   let html = case validate_node_connection(params) {
-    Ok(_) -> {
+    Ok(connection_name) -> {
       html([], [
         html.head([], [
           html.title([], title),
           server_component.script(),
+          html.meta([attribute.attribute("charset", "utf-8")]),
           html.link([
             attribute.rel("icon"),
             attribute.href("/favicon.svg"),
@@ -242,6 +241,7 @@ fn render_server_component(
         html.body([], [
           navbar.render(
             title,
+            connection_name,
             common.sanitize_params(params)
               |> common.encode_params(),
           ),
@@ -261,7 +261,7 @@ fn render_server_component(
       html([], [
         html.head([], [
           html.title([], title),
-          server_component.script(),
+          html.meta([attribute.attribute("charset", "utf-8")]),
           html.link([
             attribute.rel("icon"),
             attribute.href("/favicon.svg"),
@@ -272,6 +272,7 @@ fn render_server_component(
         html.body([], [
           navbar.render(
             title,
+            "Connection Failed",
             common.sanitize_params(params)
               |> common.encode_params(),
           ),
@@ -287,14 +288,11 @@ fn render_server_component(
                   "Failed to connect to node, please check the node name and cookie"
               }),
             ]),
-            html.div([],[
-              html.a([
-                attribute.href("/"),
-                attribute.class("button")
-              ],[
-                html.text("Return to local node")
-              ])
-            ])
+            html.div([], [
+              html.a([attribute.href("/"), attribute.class("button")], [
+                html.text("Return to local node"),
+              ]),
+            ]),
           ]),
         ]),
       ])

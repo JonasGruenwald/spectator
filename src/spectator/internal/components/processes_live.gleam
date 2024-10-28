@@ -211,14 +211,14 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
     OtpStateClicked(p, target_sys_state) -> {
       case target_sys_state {
         api.ProcessSuspended -> {
-          api.resume(model.node, p.pid)
+          let _ = api.resume(model.node, p.pid)
           #(
             do_refresh(model),
             request_otp_details(model.node, p.pid, model.subject),
           )
         }
         api.ProcessRunning -> {
-          api.suspend(model.node, p.pid)
+          let _ = api.suspend(model.node, p.pid)
           #(
             do_refresh(model),
             request_otp_details(model.node, p.pid, model.subject),
@@ -239,7 +239,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       }
     }
     KillClicked(p) -> {
-      api.kill_process(model.node, p.pid)
+      let _ = api.kill_process(model.node, p.pid)
       #(do_refresh(model), effect.none())
     }
   }
