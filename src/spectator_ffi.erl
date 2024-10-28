@@ -27,7 +27,8 @@
     get_system_info/1,
     truncate_float/1,
     kill_process/2,
-    set_cookie/2
+    set_cookie/2,
+    hidden_connect_node/1
 ]).
 
 % ---------------------------------------------------
@@ -546,6 +547,9 @@ uptime_string(NodeOption) ->
 % LOCAL HELPERS
 % ---------------------------------------------------
 % (these are exported but are not related to node inspection)
+
+hidden_connect_node(Node) ->
+    to_result(fun() -> net_kernel:hidden_connect_node(Node) end).
 
 pid_to_string(Pid) ->
     list_to_bitstring(pid_to_list(Pid)).

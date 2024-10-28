@@ -193,14 +193,12 @@ fn validate_node_connection(
       )
 
       let node_atom = atom.create_from_string(node)
-      // Try setting the cookie if one is passed,
-      // but proceed regardless of the outcome
       let cookie_validation_passed = case common.get_param(params, "cookie") {
         // No cookie, validation passes
         Error(_) -> True
         Ok(cookie) -> {
           let cookie_atom = atom.create_from_string(cookie)
-          api.set_cookie(node_atom, cookie_atom)
+          result.unwrap(api.set_cookie(node_atom, cookie_atom), False)
         }
       }
 
@@ -208,10 +206,12 @@ fn validate_node_connection(
         !cookie_validation_passed,
         Error(FailedToSetCookieError),
       )
+
       use <- bool.guard(
-        !api.hidden_connect_node(node_atom),
+        !result.unwrap(api.hidden_connect_node(node_atom), False),
         Error(FailedToConnectError),
       )
+
       Ok("🟢 " <> atom.to_string(node_atom))
     }
   }

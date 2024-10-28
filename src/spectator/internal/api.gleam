@@ -784,14 +784,17 @@ pub fn get_tag(pid: process.Pid) -> Option(String)
 
 // ------- DISTRIBUTION
 
-@external(erlang, "net_kernel", "hidden_connect_node")
-pub fn hidden_connect_node(node: atom.Atom) -> Bool
+@external(erlang, "spectator_ffi", "hidden_connect_node")
+pub fn hidden_connect_node(node: atom.Atom) -> Result(Bool, ErlangError)
 
 @external(erlang, "net_kernel", "connect_node")
 pub fn connect_node(node: atom.Atom) -> Bool
 
 @external(erlang, "spectator_ffi", "set_cookie")
-pub fn set_cookie(node: atom.Atom, cookie: atom.Atom) -> Bool
+pub fn set_cookie(
+  node: atom.Atom,
+  cookie: atom.Atom,
+) -> Result(Bool, ErlangError)
 
 pub fn node_from_params(params: common.Params) {
   case common.get_param(params, "node") {
