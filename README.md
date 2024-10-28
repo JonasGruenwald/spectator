@@ -77,7 +77,7 @@ Please be aware of the following implications of running spectator:
 * **Spectator will send system messages to selected processes**  
   In order to get a selected processes OTP state, spectator needs to send it system messages. If you select a process that is not handling these messages properly, spectator may fill up its message queue, as it is sending a new message every tick in the configured interval. If the processes message queue is over a certain size, spectator will stop sending new messages, however the process may never handle the already queued up messages
 * **Spectator will create atoms dynamically**  
-  When connecting to other Erlang nodes, spectator needs to convert the node name and cookie you set to atoms, in order to connect. Therefore it is possible to exhaust the memory of the BEAM instance running spectator using its user interface, as atoms are never garbage collected.
+  When you choose to connect to other Erlang nodes, spectator needs to convert the node name and cookie you provide into atoms. Therefore it is possible to exhaust the memory of the BEAM instance running spectator using its user interface, as atoms are never garbage collected.
 
 
 ----

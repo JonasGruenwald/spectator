@@ -29,7 +29,10 @@ pub type Params =
   List(#(String, String))
 
 pub fn encode_params(params: Params) -> String {
-  "?" <> uri.query_to_string(params)
+  case params {
+    [] -> ""
+    _ -> "?" <> uri.query_to_string(params)
+  }
 }
 
 pub fn add_param(params: Params, key: String, value: String) -> Params {
@@ -40,6 +43,17 @@ pub fn get_param(params: Params, key: String) -> Result(String, Nil) {
   list.find_map(params, fn(p) {
     case p {
       #(k, v) if k == key -> Ok(v)
+      _ -> Error(Nil)
+    }
+  })
+}
+
+pub fn sanitize_params(params: Params) -> Params {
+  list.filter_map(params, fn(p) {
+    case p {
+      #("node", _) -> Ok(p)
+      #("cookie", _) -> Ok(p)
+      #("refresh", _) -> Ok(p)
       _ -> Error(Nil)
     }
   })

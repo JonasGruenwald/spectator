@@ -1,7 +1,7 @@
-import gleam/io
 import gleam/dynamic
 import gleam/erlang/atom
 import gleam/erlang/process
+import gleam/io
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import lustre
@@ -26,6 +26,8 @@ pub fn app() {
 
 pub type Model {
   Model(
+    node: api.ErlangNode,
+    params: common.Params,
     subject: Option(process.Subject(Msg)),
     refresh_interval: Int,
     process_list: List(api.ProcessItem),
@@ -62,12 +64,8 @@ fn request_otp_details(
 }
 
 fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
-  io.debug(params)
-  let info =
-    api.get_process_list(
-      // TODO USE NODE
-      None,
-    )
+  let node = api.node_from_params(params)
+  let info = api.get_process_list(node)
   let default_sort_criteria = api.SortByReductions
   let default_sort_direction = api.Descending
   let refresh_interval = common.get_refresh_interval(params)
@@ -75,6 +73,8 @@ fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
     api.sort_process_list(info, default_sort_criteria, api.Descending)
   #(
     Model(
+      node:,
+      params: common.sanitize_params(params),
       subject: option.None,
       refresh_interval:,
       process_list: sorted,
@@ -383,6 +383,7 @@ fn view(model: Model) -> Element(Msg) {
             model.status,
             model.state,
             OtpStateClicked,
+            model.params
           ),
         ]),
       ]),
@@ -408,10 +409,12 @@ fn render_tag(process: api.ProcessItem) {
 fn render_primitive_list(
   primitives: List(api.SystemPrimitive),
   on_primitive_click: fn(process.Pid) -> Msg,
+  params: common.Params,
 ) {
   list.map(primitives, display.system_primitive_interactive(
     _,
     on_primitive_click,
+    params,
   ))
   |> list.intersperse(html.text(", "))
 }
@@ -422,6 +425,7 @@ fn render_details(
   status: Option(api.ProcessOtpStatus),
   state: Option(dynamic.Dynamic),
   handle_otp_state_click: fn(api.ProcessItem, api.SysState) -> Msg,
+  params: common.Params
 ) {
   case p, d {
     Some(proc), Some(details) ->
@@ -463,18 +467,18 @@ fn render_details(
           html.div([attribute.class("panel-content")], [
             html.dl([], [
               html.dt([], [html.text("Links")]),
-              html.dd([], render_primitive_list(details.links, PidClicked)),
+              html.dd([], render_primitive_list(details.links, PidClicked, params)),
             ]),
             html.dl([], [
               html.dt([], [html.text("Monitored By")]),
               html.dd(
                 [],
-                render_primitive_list(details.monitored_by, PidClicked),
+                render_primitive_list(details.monitored_by, PidClicked, params),
               ),
             ]),
             html.dl([], [
               html.dt([], [html.text("Monitors")]),
-              html.dd([], render_primitive_list(details.monitors, PidClicked)),
+              html.dd([], render_primitive_list(details.monitors, PidClicked, params)),
             ]),
             html.dl([], [
               html.dt([], [html.text("Parent")]),
@@ -482,7 +486,7 @@ fn render_details(
                 case details.parent {
                   option.None -> html.text("None")
                   option.Some(parent) ->
-                    display.system_primitive_interactive(parent, PidClicked)
+                    display.system_primitive_interactive(parent, PidClicked, params)
                 },
               ]),
             ]),

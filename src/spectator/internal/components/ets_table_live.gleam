@@ -24,7 +24,8 @@ pub fn app() {
 
 pub type Model {
   Model(
-    // Relevant for table list
+    node: api.ErlangNode,
+    params: common.Params,
     subject: Option(process.Subject(Msg)),
     refresh_interval: Int,
     table: Option(api.Table),
@@ -43,6 +44,7 @@ fn get_ets_table_info_from_list(node: api.ErlangNode, table_name: atom.Atom) {
 }
 
 fn get_initial_data(params: common.Params) -> Result(Model, api.ErlangError) {
+  let node = api.node_from_params(params)
   use table_name <- result.try(
     common.get_param(params, "table_name")
     |> result.replace_error(api.ReturnedUndefinedError),
@@ -51,29 +53,18 @@ fn get_initial_data(params: common.Params) -> Result(Model, api.ErlangError) {
     atom.from_string(table_name)
     |> result.replace_error(api.ReturnedUndefinedError),
   )
-  use table <- result.try(result.lazy_or(
-    api.get_ets_table_info(
-      // TODO USE NODE
-      None,
-      table_atom,
-    ),
-    fn() {
-      get_ets_table_info_from_list(
-        // TODO USE NODE
-        None,
-        table_atom,
-      )
-    },
-  ))
+  use table <- result.try(
+    result.lazy_or(api.get_ets_table_info(node, table_atom), fn() {
+      get_ets_table_info_from_list(node, table_atom)
+    }),
+  )
   let refresh_interval = common.get_refresh_interval(params)
   let table_data =
-    api.get_ets_data(
-      // TODO USE NODE 
-      None,
-      table,
-    )
+    api.get_ets_data(node, table)
     |> option.from_result
   Ok(Model(
+    node:,
+    params: common.sanitize_params(params),
     subject: None,
     refresh_interval:,
     table: Some(table),
@@ -91,6 +82,8 @@ fn init(params: common.Params) {
     )
     Error(_) -> #(
       Model(
+        None,
+        [],
         None,
         common.refresh_interval_default,
         None,
@@ -114,14 +107,7 @@ pub opaque type Msg {
 fn do_refresh(model: Model) -> Model {
   case model.table {
     Some(t) -> {
-      case
-        api.get_ets_data(
-          // TODO USE NODE
-          None,
-          t,
-        ),
-        model.sort_column
-      {
+      case api.get_ets_data(model.node, t), model.sort_column {
         Ok(data), Some(sort_column_index) -> {
           // see it, say it,
           let sorted =
@@ -132,6 +118,8 @@ fn do_refresh(model: Model) -> Model {
         Ok(data), None -> Model(..model, table_data: Some(data))
         Error(_), _ ->
           Model(
+            None,
+            [],
             None,
             common.refresh_interval_default,
             None,

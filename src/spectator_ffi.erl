@@ -60,6 +60,9 @@ to_result(Function) ->
     catch
         % An error occurred with the ERPC call
         error:{erpc, Reason} -> {error, {erpc_error, Reason}};
+        % Process info errors
+        error:process_not_found -> {error, {not_found_error}};
+        error:process_no_info -> {error, {no_info_error}};
         % Standard Erlang errors
         error:notsup -> {error, {not_supported_error}};
         error:badarg -> {error, {bad_argument_error}};
@@ -163,7 +166,7 @@ extract_sysstate_and_parent([H | T], SysState, Parent) ->
         _ -> extract_sysstate_and_parent(T, SysState, Parent)
     end.
 
-% 
+%
 sys_suspend(NodeOption, Pid) ->
     to_result(fun() -> do_call(NodeOption, sys, suspend, [Pid]) end).
 
@@ -199,9 +202,9 @@ get_process_info(NodeOption, Name) ->
         P = do_call(NodeOption, erlang, process_info, [Name, ItemList]),
         case P of
             undefined ->
-                {error, not_found};
+                error(process_not_found);
             [] ->
-                {error, no_info};
+                error(process_no_info);
             Info ->
                 {_Keys, Values} = lists:unzip(Info),
                 InfoTuple = list_to_tuple(Values),
@@ -328,7 +331,6 @@ get_details(NodeOption, Name) ->
 % !! THROWS - wrap in to_result
 extract_val(Tuple) ->
     assert_val(element(2, Tuple)).
-
 
 list_ports(NodeOption) ->
     to_result(fun() ->
@@ -549,7 +551,7 @@ pid_to_string(Pid) ->
     list_to_bitstring(pid_to_list(Pid)).
 
 set_cookie(Node, Cookie) ->
-  to_result(fun() -> erlang:set_cookie(Node, Cookie) end).
+    to_result(fun() -> erlang:set_cookie(Node, Cookie) end).
 
 truncate_float(F) ->
     list_to_bitstring(io_lib:format("~.2f", [F])).

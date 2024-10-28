@@ -230,7 +230,11 @@ fn render_server_component(
           html.style([], styles),
         ]),
         html.body([], [
-          navbar.render(title),
+          navbar.render(
+            title,
+            common.sanitize_params(params)
+              |> common.encode_params(),
+          ),
           element.element(
             "lustre-server-component",
             [
@@ -256,7 +260,11 @@ fn render_server_component(
           html.style([], styles),
         ]),
         html.body([], [
-          navbar.render(title),
+          navbar.render(
+            title,
+            common.sanitize_params(params)
+              |> common.encode_params(),
+          ),
           html.div([attribute.class("component-error")], [
             html.text(
               "Node connection failed! Please verify that the configured node and cookie are correct.",

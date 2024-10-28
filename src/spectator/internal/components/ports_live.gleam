@@ -23,6 +23,8 @@ pub fn app() {
 
 pub type Model {
   Model(
+    node: api.ErlangNode,
+    params: common.Params,
     subject: Option(process.Subject(Msg)),
     refresh_interval: Int,
     port_list: List(api.PortItem),
@@ -34,11 +36,8 @@ pub type Model {
 }
 
 fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
-  let info =
-    api.get_port_list(
-      // TODO USE NODE
-      None,
-    )
+  let node = api.node_from_params(params)
+  let info = api.get_port_list(node)
   let refresh_interval = common.get_refresh_interval(params)
   let default_sort_criteria = api.SortByPortInput
   let default_sort_direction = api.Descending
@@ -50,11 +49,7 @@ fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
         api.decode_port(raw_port_id) |> option.from_result,
       )
       use info <- option.then(
-        api.get_port_info(
-          // TODO USE NODE
-          None,
-          port_id,
-        )
+        api.get_port_info(node, port_id)
         |> option.from_result,
       )
       Some(api.PortItem(port_id:, info:))
@@ -63,13 +58,7 @@ fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
   let details = case active_port {
     None -> None
     Some(ap) -> {
-      case
-        api.get_port_details(
-          // TODO USE NODE
-          None,
-          ap.port_id,
-        )
-      {
+      case api.get_port_details(node, ap.port_id) {
         Ok(details) -> Some(details)
         Error(_) -> None
       }
@@ -77,6 +66,8 @@ fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
   }
   #(
     Model(
+      node:,
+      params: common.sanitize_params(params),
       subject: option.None,
       refresh_interval: refresh_interval,
       port_list: sorted,
@@ -99,24 +90,14 @@ pub opaque type Msg {
 }
 
 fn do_refresh(model: Model) -> Model {
-  let info =
-    api.get_port_list(
-      // TODO USE NODE
-      None,
-    )
+  let info = api.get_port_list(model.node)
   let sorted =
     api.sort_port_list(info, model.sort_criteria, model.sort_direction)
 
   let active_port = case model.active_port {
     None -> None
     Some(active_port) -> {
-      case
-        api.get_port_info(
-          // TODO USE NODE
-          None,
-          active_port.port_id,
-        )
-      {
+      case api.get_port_info(model.node, active_port.port_id) {
         Ok(info) -> Some(api.PortItem(active_port.port_id, info))
         Error(_) -> None
       }
@@ -126,13 +107,7 @@ fn do_refresh(model: Model) -> Model {
   let details = case active_port {
     None -> None
     Some(ap) -> {
-      case
-        api.get_port_details(
-          // TODO USE NODE
-          None,
-          ap.port_id,
-        )
-      {
+      case api.get_port_details(model.node, ap.port_id) {
         Ok(details) -> {
           Some(details)
         }
@@ -282,7 +257,10 @@ fn view(model: Model) -> Element(Msg) {
             html.td([], [render_name(port)]),
             html.td([], [html.text(port.info.command_name)]),
             html.td([attribute.class("link-cell")], [
-              display.system_primitive(port.info.connected_process),
+              display.system_primitive(
+                port.info.connected_process,
+                model.params,
+              ),
             ]),
             html.td([], [
               case port.info.os_pid {
@@ -309,7 +287,7 @@ fn view(model: Model) -> Element(Msg) {
     html.tfoot([], [
       html.tr([], [
         html.td([attribute.attribute("colspan", "8")], [
-          render_details(model.active_port, model.details),
+          render_details(model.active_port, model.details, model.params),
         ]),
       ]),
     ]),
@@ -323,30 +301,39 @@ fn render_name(process: api.PortItem) {
   }
 }
 
-fn render_primitive_list(primitives: List(api.SystemPrimitive)) {
-  list.map(primitives, display.system_primitive)
+fn render_primitive_list(
+  primitives: List(api.SystemPrimitive),
+  params: common.Params,
+) {
+  list.map(primitives, display.system_primitive(_, params))
   |> list.intersperse(html.text(", "))
 }
 
-fn render_details(p: Option(api.PortItem), d: Option(api.PortDetails)) {
+fn render_details(
+  p: Option(api.PortItem),
+  d: Option(api.PortDetails),
+  params: common.Params,
+) {
   case p, d {
     Some(port), Some(details) ->
       html.div([attribute.class("details compact")], [
         html.dl([], [
           html.dt([], [html.text("Connected Process")]),
-          html.dd([], [display.system_primitive(port.info.connected_process)]),
+          html.dd([], [
+            display.system_primitive(port.info.connected_process, params),
+          ]),
         ]),
         html.dl([], [
           html.dt([], [html.text("Links")]),
-          html.dd([], render_primitive_list(details.links)),
+          html.dd([], render_primitive_list(details.links, params)),
         ]),
         html.dl([], [
           html.dt([], [html.text("Monitored By")]),
-          html.dd([], render_primitive_list(details.monitored_by)),
+          html.dd([], render_primitive_list(details.monitored_by, params)),
         ]),
         html.dl([], [
           html.dt([], [html.text("Monitors")]),
-          html.dd([], render_primitive_list(details.monitors)),
+          html.dd([], render_primitive_list(details.monitors, params)),
         ]),
       ])
     _, _ ->

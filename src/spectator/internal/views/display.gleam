@@ -11,6 +11,7 @@ import lustre/attribute
 import lustre/element/html
 import lustre/event
 import spectator/internal/api
+import spectator/internal/common
 
 pub fn pid(pid: process.Pid) {
   html.text(api.format_pid(pid))
@@ -69,12 +70,21 @@ pub fn pid_button(
   }
 }
 
-pub fn pid_link(pid: process.Pid, name: Option(atom.Atom), tag: Option(String)) {
+pub fn pid_link(
+  pid: process.Pid,
+  name: Option(atom.Atom),
+  tag: Option(String),
+  params: common.Params,
+) {
   case name, tag {
     None, None ->
       html.a(
         [
-          attribute.href("/processes?selected=" <> api.serialize_pid(pid)),
+          attribute.href(
+            "/processes"
+            <> common.add_param(params, "selected", api.serialize_pid(pid))
+            |> common.encode_params(),
+          ),
           attribute.class("interactive-primitive"),
         ],
         [html.text(api.format_pid(pid))],
@@ -82,7 +92,11 @@ pub fn pid_link(pid: process.Pid, name: Option(atom.Atom), tag: Option(String)) 
     Some(name), None ->
       html.a(
         [
-          attribute.href("/processes?selected=" <> api.serialize_pid(pid)),
+          attribute.href(
+            "/processes"
+            <> common.add_param(params, "selected", api.serialize_pid(pid))
+            |> common.encode_params(),
+          ),
           attribute.class("interactive-primitive named"),
           attribute.title("PID" <> api.format_pid(pid)),
         ],
@@ -91,7 +105,11 @@ pub fn pid_link(pid: process.Pid, name: Option(atom.Atom), tag: Option(String)) 
     None, Some("__spectator_internal" <> internal_tag) ->
       html.a(
         [
-          attribute.href("/processes?selected=" <> api.serialize_pid(pid)),
+          attribute.href(
+            "/processes"
+            <> common.add_param(params, "selected", api.serialize_pid(pid))
+            |> common.encode_params(),
+          ),
           attribute.class("interactive-primitive muted"),
           attribute.title("This process is used for the Spectator application"),
         ],
@@ -100,7 +118,11 @@ pub fn pid_link(pid: process.Pid, name: Option(atom.Atom), tag: Option(String)) 
     None, Some(tag) ->
       html.a(
         [
-          attribute.href("/processes?selected=" <> api.serialize_pid(pid)),
+          attribute.href(
+            "/processes"
+            <> common.add_param(params, "selected", api.serialize_pid(pid))
+            |> common.encode_params(),
+          ),
           attribute.class("interactive-primitive tagged"),
         ],
         [html.text("🔖 " <> tag <> api.format_pid(pid))],
@@ -108,7 +130,11 @@ pub fn pid_link(pid: process.Pid, name: Option(atom.Atom), tag: Option(String)) 
     Some(name), Some(tag) ->
       html.a(
         [
-          attribute.href("/processes?selected=" <> api.serialize_pid(pid)),
+          attribute.href(
+            "/processes"
+            <> common.add_param(params, "selected", api.serialize_pid(pid))
+            |> common.encode_params(),
+          ),
           attribute.class("interactive-primitive named tagged"),
           attribute.title("PID" <> api.format_pid(pid)),
         ],
@@ -121,7 +147,11 @@ pub fn port(port: port.Port) {
   html.text(api.format_port(port))
 }
 
-pub fn port_link(port: port.Port, name: Option(atom.Atom)) {
+pub fn port_link(
+  port: port.Port,
+  name: Option(atom.Atom),
+  params: common.Params,
+) {
   let label = case name {
     None -> api.format_port(port)
     Some(n) -> api.format_port(port) <> " (" <> atom.to_string(n) <> ")"
@@ -129,7 +159,11 @@ pub fn port_link(port: port.Port, name: Option(atom.Atom)) {
   html.a(
     [
       attribute.class("interactive-primitive"),
-      attribute.href("/ports?selected=" <> api.serialize_port(port)),
+      attribute.href(
+        "/ports"
+        <> common.add_param(params, "selected", api.serialize_port(port))
+        |> common.encode_params(),
+      ),
     ],
     [html.text(label)],
   )
@@ -186,21 +220,22 @@ pub fn named_remote_process(name: atom.Atom, node: atom.Atom) {
 pub fn system_primitive_interactive(
   primitive: api.SystemPrimitive,
   on_process_click: fn(process.Pid) -> a,
+  params: common.Params,
 ) {
   case primitive {
     api.ProcessPrimitive(pid:, name:, tag:) ->
       pid_button(pid, name, tag, on_process_click)
     api.RemoteProcessPrimitive(name:, node:) -> named_remote_process(name, node)
-    api.PortPrimitive(port_id:, name:) -> port_link(port_id, name)
+    api.PortPrimitive(port_id:, name:) -> port_link(port_id, name, params)
     api.NifResourcePrimitive(_) -> html.text("NIF Res.")
   }
 }
 
-pub fn system_primitive(primitive: api.SystemPrimitive) {
+pub fn system_primitive(primitive: api.SystemPrimitive, params: common.Params) {
   case primitive {
-    api.ProcessPrimitive(pid:, name:, tag:) -> pid_link(pid, name, tag)
+    api.ProcessPrimitive(pid:, name:, tag:) -> pid_link(pid, name, tag, params)
     api.RemoteProcessPrimitive(name:, node:) -> named_remote_process(name, node)
-    api.PortPrimitive(port_id:, name:) -> port_link(port_id, name)
+    api.PortPrimitive(port_id:, name:) -> port_link(port_id, name, params)
     api.NifResourcePrimitive(_) -> html.text("NIF Res.")
   }
 }

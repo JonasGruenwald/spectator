@@ -12,6 +12,7 @@ import gleam/result
 import gleam/string
 import gleam/uri
 import logging.{log}
+import spectator/internal/common
 
 pub type ErlangNode =
   Option(atom.Atom)
@@ -21,6 +22,8 @@ pub type ErlangError {
   NotSupportedError
   BadArgumentError
   ReturnedUndefinedError
+  NotFoundError
+  NoInfoError
   DynamicError(reason: dynamic.Dynamic)
 }
 
@@ -789,3 +792,10 @@ pub fn connect_node(node: atom.Atom) -> Bool
 
 @external(erlang, "spectator_ffi", "set_cookie")
 pub fn set_cookie(node: atom.Atom, cookie: atom.Atom) -> Bool
+
+pub fn node_from_params(params: common.Params) {
+  case common.get_param(params, "node") {
+    Ok(node_raw) -> Some(atom.create_from_string(node_raw))
+    Error(_) -> None
+  }
+}

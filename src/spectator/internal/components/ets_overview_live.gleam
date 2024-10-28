@@ -23,7 +23,8 @@ pub fn app() {
 
 pub type Model {
   Model(
-    // Relevant for table list
+    node: api.ErlangNode,
+    params: common.Params,
     subject: Option(process.Subject(Msg)),
     refresh_interval: Int,
     tables: List(api.Table),
@@ -34,22 +35,22 @@ pub type Model {
 }
 
 fn init(params) {
+  let node = api.node_from_params(params)
   let defaul_sort_criteria = api.SortByTableSize
   let defaul_sort_direction = api.Descending
   let refresh_interval = common.get_refresh_interval(params)
-  let word_size =
-    result.unwrap(
-      api.get_word_size(
-        // TODO USE NODE
-        None,
-      ),
-      8,
-    )
+  let word_size = result.unwrap(api.get_word_size(node), 8)
   #(
     Model(
+      node:,
+      params: common.sanitize_params(params),
       subject: None,
       refresh_interval:,
-      tables: get_sorted_tables(defaul_sort_criteria, defaul_sort_direction),
+      tables: get_sorted_tables(
+        node,
+        defaul_sort_criteria,
+        defaul_sort_direction,
+      ),
       word_size:,
       sort_criteria: defaul_sort_criteria,
       sort_direction: defaul_sort_direction,
@@ -66,14 +67,12 @@ pub opaque type Msg {
   CreatedSubject(process.Subject(Msg))
 }
 
-fn get_sorted_tables(sort_criteria, sort_direction) -> List(api.Table) {
-  result.unwrap(
-    api.list_ets_tables(
-      // TODO USE NODE
-      None,
-    ),
-    [],
-  )
+fn get_sorted_tables(
+  node: api.ErlangNode,
+  sort_criteria,
+  sort_direction,
+) -> List(api.Table) {
+  result.unwrap(api.list_ets_tables(node), [])
   |> api.sort_table_list(sort_criteria, sort_direction)
 }
 
@@ -82,7 +81,11 @@ fn update(model: Model, msg: Msg) {
     Refresh -> #(
       Model(
         ..model,
-        tables: get_sorted_tables(model.sort_criteria, model.sort_direction),
+        tables: get_sorted_tables(
+          model.node,
+          model.sort_criteria,
+          model.sort_direction,
+        ),
       ),
       common.emit_after(
         model.refresh_interval,
@@ -102,7 +105,7 @@ fn update(model: Model, msg: Msg) {
           let new_model =
             Model(
               ..model,
-              tables: get_sorted_tables(c, new_direction),
+              tables: get_sorted_tables(model.node, c, new_direction),
               sort_direction: new_direction,
             )
           #(new_model, effect.none())
@@ -111,7 +114,7 @@ fn update(model: Model, msg: Msg) {
           let new_model =
             Model(
               ..model,
-              tables: get_sorted_tables(c, model.sort_direction),
+              tables: get_sorted_tables(model.node, c, model.sort_direction),
               sort_criteria: c,
             )
           #(new_model, effect.none())
@@ -207,34 +210,42 @@ fn view(model: Model) -> Element(Msg) {
         html.tr([], [
           html.td(
             [attribute.class("link-cell")],
-            link_cell(t, [display.atom(t.name)]),
+            link_cell(t, [display.atom(t.name)], model.params),
           ),
           html.td(
             [attribute.class("link-cell")],
-            link_cell(t, [display.atom(t.table_type)]),
+            link_cell(t, [display.atom(t.table_type)], model.params),
           ),
           html.td(
             [attribute.class("cell-right link-cell")],
-            link_cell(t, [display.number(t.size), html.text(" items")]),
+            link_cell(
+              t,
+              [display.number(t.size), html.text(" items")],
+              model.params,
+            ),
           ),
           html.td(
             [attribute.class("cell-right link-cell")],
-            link_cell(t, [display.storage_words(t.memory, model.word_size)]),
+            link_cell(
+              t,
+              [display.storage_words(t.memory, model.word_size)],
+              model.params,
+            ),
           ),
           html.td([attribute.class("cell-right link-cell")], [
-            display.system_primitive(t.owner),
+            display.system_primitive(t.owner, model.params),
           ]),
           html.td(
             [attribute.class("cell-right link-cell")],
-            link_cell(t, [display.atom(t.protection)]),
+            link_cell(t, [display.atom(t.protection)], model.params),
           ),
           html.td(
             [attribute.class("cell-right link-cell")],
-            link_cell(t, [display.bool(t.read_concurrency)]),
+            link_cell(t, [display.bool(t.read_concurrency)], model.params),
           ),
           html.td(
             [attribute.class("cell-right link-cell")],
-            link_cell(t, [display.bool(t.write_concurrency)]),
+            link_cell(t, [display.bool(t.write_concurrency)], model.params),
           ),
         ])
       }),
@@ -254,10 +265,17 @@ fn view(model: Model) -> Element(Msg) {
 fn link_cell(
   t: api.Table,
   children: List(element.Element(Msg)),
+  params: common.Params,
 ) -> List(element.Element(Msg)) {
   [
     html.a(
-      [attribute.href("/ets/" <> uri.percent_encode(atom.to_string(t.name)))],
+      [
+        attribute.href(
+          "/ets/"
+          <> uri.percent_encode(atom.to_string(t.name))
+          <> common.encode_params(params),
+        ),
+      ],
       children,
     ),
   ]
