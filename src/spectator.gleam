@@ -1,3 +1,4 @@
+import gleam/bool
 import gleam/bytes_builder
 import gleam/dynamic
 import gleam/erlang
@@ -14,7 +15,6 @@ import gleam/option
 import gleam/otp/actor
 import gleam/otp/static_supervisor as sup
 import gleam/result
-import gleam/string
 import gleam/uri
 import logging
 import lustre
@@ -172,39 +172,49 @@ pub fn tag_result(
   }
 }
 
-fn validate_node_connection(params: common.Params) -> Result(Nil, Nil) {
+type NodeConnectionError {
+  NotDistributedError
+  FailedToSetCookieError
+  FailedToConnectError
+}
+
+fn validate_node_connection(
+  params: common.Params,
+) -> Result(Nil, NodeConnectionError) {
   let node_res = common.get_param(params, "node")
+
   case node_res {
     // No node passed, that's fine, we'll just use the local node
+    // no other checks are needed
     Error(_) -> Ok(Nil)
     Ok(node) -> {
+      let self = node.self() |> node.to_atom()
+      use <- bool.guard(
+        self == atom.create_from_string("nonode@nohost"),
+        Error(NotDistributedError),
+      )
+
       let node_atom = atom.create_from_string(node)
       // Try setting the cookie if one is passed,
       // but proceed regardless of the outcome
-      case common.get_param(params, "cookie") {
-        Error(_) -> Nil
+      let cookie_validation_passed = case common.get_param(params, "cookie") {
+        // No cookie, validation passes
+        Error(_) -> True
         Ok(cookie) -> {
           let cookie_atom = atom.create_from_string(cookie)
-          case api.set_cookie(node_atom, cookie_atom) {
-            True -> Nil
-            False -> {
-              logging.log(
-                logging.Warning,
-                "Failed to set cookie for the passed node "
-                  <> node
-                  <> " will try to connect regardless.",
-              )
-              Nil
-            }
-          }
+          api.set_cookie(node_atom, cookie_atom)
         }
       }
-      // Connect to the passed node
-      // If this fails, we should not proceed
-      case api.hidden_connect_node(node_atom) {
-        True -> Ok(Nil)
-        False -> Error(Nil)
-      }
+
+      use <- bool.guard(
+        !cookie_validation_passed,
+        Error(FailedToSetCookieError),
+      )
+      use <- bool.guard(
+        !api.hidden_connect_node(node_atom),
+        Error(FailedToConnectError),
+      )
+      Ok(Nil)
     }
   }
 }
@@ -247,7 +257,7 @@ fn render_server_component(
         ]),
       ])
     }
-    Error(_) -> {
+    Error(connection_error) -> {
       html([], [
         html.head([], [
           html.title([], title),
@@ -266,9 +276,25 @@ fn render_server_component(
               |> common.encode_params(),
           ),
           html.div([attribute.class("component-error")], [
-            html.text(
-              "Node connection failed! Please verify that the configured node and cookie are correct.",
-            ),
+            html.div([], [html.text("Node connection failed:")]),
+            html.div([], [
+              html.text(case connection_error {
+                NotDistributedError ->
+                  "Node is not distributed, cannot connect to other nodes. Please start the spectator instance in distributed mode by setting a node name."
+                FailedToSetCookieError ->
+                  "Failed to set cookie, could not apply the cookie to the node"
+                FailedToConnectError ->
+                  "Failed to connect to node, please check the node name and cookie"
+              }),
+            ]),
+            html.div([],[
+              html.a([
+                attribute.href("/"),
+                attribute.class("button")
+              ],[
+                html.text("Return to local node")
+              ])
+            ])
           ]),
         ]),
       ])

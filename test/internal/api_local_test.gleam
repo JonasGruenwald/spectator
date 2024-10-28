@@ -130,6 +130,14 @@ pub fn get_process_info_test() {
   |> should.equal("Int")
 }
 
+pub fn get_process_info_failure_test() {
+  // If this test is flakey, think of something else
+  // (or remove it hehe)
+  let assert Ok(pid) = api.decode_pid("<0.255.0>")
+  api.get_process_info(None, pid)
+  |> should.be_error
+}
+
 // -------[PROCESS DETAILS]
 
 pub fn get_details_test() {

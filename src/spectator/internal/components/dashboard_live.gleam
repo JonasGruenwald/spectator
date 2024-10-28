@@ -21,6 +21,8 @@ pub fn app() {
 
 pub opaque type Model {
   Model(
+    node: api.ErlangNode,
+    params: common.Params,
     subject: Option(process.Subject(Msg)),
     refresh_interval: Int,
     memory_stats: Option(api.MemoryStatistics),
@@ -51,8 +53,11 @@ type RelativeSystemLimits {
 }
 
 fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
+  let node = api.node_from_params(params)
   let initial_model =
     do_refresh(Model(
+      node:,
+      params: common.sanitize_params(params),
       subject: None,
       refresh_interval: common.get_refresh_interval(params),
       memory_stats: None,
@@ -119,20 +124,14 @@ fn get_relative_system_limits(input: api.SystemInfo) {
 
 fn do_refresh(model: Model) -> Model {
   let memory_stats =
-    api.get_memory_statistics(
-      // TODO USE NODE
-      None,
-    )
+    api.get_memory_statistics(model.node)
     |> option.from_result
   let memory_relative = case memory_stats {
     None -> None
     Some(stats) -> Some(get_relative_memory_stats(stats))
   }
   let system_info =
-    api.get_system_info(
-      // TODO USE NODE
-      None,
-    )
+    api.get_system_info(model.node)
     |> option.from_result
   let system_limits = case system_info {
     None -> None

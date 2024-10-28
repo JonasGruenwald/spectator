@@ -70,13 +70,17 @@ dt {
   margin-bottom: 5px;
 }
 
-button {
+button,
+.button {
   background: var(--background);
   border: 1px solid var(--text);
   color: var(--text);
+  padding: 1px 4px;
+  text-decoration: none;
 }
 
-button:hover {
+button:hover,
+.button:hover {
   background: var(--text);
   color: var(--background);
 }
@@ -312,6 +316,9 @@ tbody tr.tagged.selected {
   display: flex;
   justify-content: center;
   align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 /* Process Details View */
@@ -444,7 +451,7 @@ table.ets-data tbody tr:hover {
   gap: 10px
 }
 
-.limit-item{
+.limit-item {
   margin-bottom: 10px;
 }
 

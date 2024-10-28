@@ -1,7 +1,6 @@
 import gleam/dynamic
 import gleam/erlang/atom
 import gleam/erlang/process
-import gleam/io
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import lustre
@@ -45,18 +44,16 @@ fn emit_message(msg: Msg) -> effect.Effect(Msg) {
 }
 
 fn request_otp_details(
+  node: api.ErlangNode,
   pid: process.Pid,
   subject: Option(process.Subject(Msg)),
 ) -> effect.Effect(Msg) {
   case subject {
     Some(sub) -> {
       use _ <- effect.from
-      api.request_otp_data(
-        // TODO USE NODE
-        None,
-        pid,
-        fn(details) { process.send(sub, ReceivedOtpDetails(details)) },
-      )
+      api.request_otp_data(node, pid, fn(details) {
+        process.send(sub, ReceivedOtpDetails(details))
+      })
       Nil
     }
     None -> effect.none()
@@ -114,24 +111,14 @@ pub opaque type Msg {
 }
 
 fn do_refresh(model: Model) -> Model {
-  let info =
-    api.get_process_list(
-      // TODO USE NODE
-      None,
-    )
+  let info = api.get_process_list(model.node)
   let sorted =
     api.sort_process_list(info, model.sort_criteria, model.sort_direction)
 
   let active_process = case model.active_process {
     None -> None
     Some(active_process) -> {
-      case
-        api.get_process_info(
-          // TODO USE NODE
-          None,
-          active_process.pid,
-        )
-      {
+      case api.get_process_info(model.node, active_process.pid) {
         Ok(info) -> Some(api.ProcessItem(active_process.pid, info))
         Error(_) -> None
       }
@@ -141,13 +128,7 @@ fn do_refresh(model: Model) -> Model {
   let details = case active_process {
     None -> None
     Some(ap) -> {
-      case
-        api.get_details(
-          // TODO USE NODE
-          None,
-          ap.pid,
-        )
-      {
+      case api.get_details(model.node, ap.pid) {
         Ok(details) -> {
           Some(details)
         }
@@ -166,7 +147,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         Some(p) if p.info.message_queue_len < common.message_queue_threshold -> #(
           new_model,
           effect.batch([
-            request_otp_details(p.pid, model.subject),
+            request_otp_details(model.node, p.pid, model.subject),
             common.emit_after(
               model.refresh_interval,
               Refresh,
@@ -194,7 +175,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       let new_model =
         Model(..model, active_process: Some(p), state: None, status: None)
         |> do_refresh
-      #(new_model, request_otp_details(p.pid, model.subject))
+      #(new_model, request_otp_details(model.node, p.pid, model.subject))
     }
     HeadingClicked(criteria) -> {
       case criteria {
@@ -230,47 +211,35 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
     OtpStateClicked(p, target_sys_state) -> {
       case target_sys_state {
         api.ProcessSuspended -> {
-          api.resume(
-            // TODO USE NODE
-            None,
-            p.pid,
+          api.resume(model.node, p.pid)
+          #(
+            do_refresh(model),
+            request_otp_details(model.node, p.pid, model.subject),
           )
-          #(do_refresh(model), request_otp_details(p.pid, model.subject))
         }
         api.ProcessRunning -> {
-          api.suspend(
-            // TODO USE NODE
-            None,
-            p.pid,
+          api.suspend(model.node, p.pid)
+          #(
+            do_refresh(model),
+            request_otp_details(model.node, p.pid, model.subject),
           )
-          #(do_refresh(model), request_otp_details(p.pid, model.subject))
         }
       }
     }
     PidClicked(pid) -> {
-      case
-        api.get_process_info(
-          // TODO USE NODE
-          None,
-          pid,
-        )
-      {
+      case api.get_process_info(model.node, pid) {
         Ok(info) -> {
           let p = api.ProcessItem(pid, info)
           let new_model =
             Model(..model, active_process: Some(p), state: None, status: None)
             |> do_refresh
-          #(new_model, request_otp_details(p.pid, model.subject))
+          #(new_model, request_otp_details(model.node, p.pid, model.subject))
         }
         Error(_) -> #(model, effect.none())
       }
     }
     KillClicked(p) -> {
-      api.kill_process(
-        // TODO USE NODE
-        None,
-        p.pid,
-      )
+      api.kill_process(model.node, p.pid)
       #(do_refresh(model), effect.none())
     }
   }
@@ -383,7 +352,7 @@ fn view(model: Model) -> Element(Msg) {
             model.status,
             model.state,
             OtpStateClicked,
-            model.params
+            model.params,
           ),
         ]),
       ]),
@@ -425,7 +394,7 @@ fn render_details(
   status: Option(api.ProcessOtpStatus),
   state: Option(dynamic.Dynamic),
   handle_otp_state_click: fn(api.ProcessItem, api.SysState) -> Msg,
-  params: common.Params
+  params: common.Params,
 ) {
   case p, d {
     Some(proc), Some(details) ->
@@ -467,7 +436,10 @@ fn render_details(
           html.div([attribute.class("panel-content")], [
             html.dl([], [
               html.dt([], [html.text("Links")]),
-              html.dd([], render_primitive_list(details.links, PidClicked, params)),
+              html.dd(
+                [],
+                render_primitive_list(details.links, PidClicked, params),
+              ),
             ]),
             html.dl([], [
               html.dt([], [html.text("Monitored By")]),
@@ -478,7 +450,10 @@ fn render_details(
             ]),
             html.dl([], [
               html.dt([], [html.text("Monitors")]),
-              html.dd([], render_primitive_list(details.monitors, PidClicked, params)),
+              html.dd(
+                [],
+                render_primitive_list(details.monitors, PidClicked, params),
+              ),
             ]),
             html.dl([], [
               html.dt([], [html.text("Parent")]),
@@ -486,7 +461,11 @@ fn render_details(
                 case details.parent {
                   option.None -> html.text("None")
                   option.Some(parent) ->
-                    display.system_primitive_interactive(parent, PidClicked, params)
+                    display.system_primitive_interactive(
+                      parent,
+                      PidClicked,
+                      params,
+                    )
                 },
               ]),
             ]),
