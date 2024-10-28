@@ -24,8 +24,10 @@ pub fn app() {
 
 pub type Model {
   Model(
-    // Relevant for table list
+    node: api.ErlangNode,
+    params: common.Params,
     subject: Option(process.Subject(Msg)),
+    refresh_interval: Int,
     table: Option(api.Table),
     table_data: Option(api.TableData),
     sort_column: Option(Int),
@@ -35,25 +37,36 @@ pub type Model {
 
 /// Sometimes we can't get the table info from an atom directly
 /// so we fall back to the slower list lookup here
-fn get_ets_table_info_from_list(table_name: atom.Atom) {
-  use tables <- result.try(api.list_ets_tables())
+fn get_ets_table_info_from_list(node: api.ErlangNode, table_name: atom.Atom) {
+  use tables <- result.try(api.list_ets_tables(node))
   list.find(tables, fn(t) { t.name == table_name })
-  |> result.replace_error(Nil)
+  |> result.replace_error(api.ReturnedUndefinedError)
 }
 
-fn get_initial_data(params: common.Params) -> Result(Model, Nil) {
-  use table_name <- result.try(common.get_param(params, "table_name"))
+fn get_initial_data(params: common.Params) -> Result(Model, api.ErlangError) {
+  let node = api.node_from_params(params)
+  use table_name <- result.try(
+    common.get_param(params, "table_name")
+    |> result.replace_error(api.ReturnedUndefinedError),
+  )
   use table_atom <- result.try(
-    atom.from_string(table_name) |> result.replace_error(Nil),
+    atom.from_string(table_name)
+    |> result.replace_error(api.ReturnedUndefinedError),
   )
   use table <- result.try(
-    result.lazy_or(api.get_ets_table_info(table_atom), fn() {
-      get_ets_table_info_from_list(table_atom)
+    result.lazy_or(api.get_ets_table_info(node, table_atom), fn() {
+      get_ets_table_info_from_list(node, table_atom)
     }),
   )
-  let table_data = api.get_ets_data(table) |> option.from_result
+  let refresh_interval = common.get_refresh_interval(params)
+  let table_data =
+    api.get_ets_data(node, table)
+    |> option.from_result
   Ok(Model(
+    node:,
+    params: common.sanitize_params(params),
     subject: None,
+    refresh_interval:,
     table: Some(table),
     table_data: table_data,
     sort_column: None,
@@ -65,9 +78,21 @@ fn init(params: common.Params) {
   case get_initial_data(params) {
     Ok(model) -> #(
       model,
-      common.emit_after(common.refresh_interval, Refresh, None, CreatedSubject),
+      common.emit_after(model.refresh_interval, Refresh, None, CreatedSubject),
     )
-    Error(_) -> #(Model(None, None, None, None, api.Descending), effect.none())
+    Error(_) -> #(
+      Model(
+        None,
+        [],
+        None,
+        common.refresh_interval_default,
+        None,
+        None,
+        None,
+        api.Descending,
+      ),
+      effect.none(),
+    )
   }
 }
 
@@ -82,7 +107,7 @@ pub opaque type Msg {
 fn do_refresh(model: Model) -> Model {
   case model.table {
     Some(t) -> {
-      case api.get_ets_data(t), model.sort_column {
+      case api.get_ets_data(model.node, t), model.sort_column {
         Ok(data), Some(sort_column_index) -> {
           // see it, say it,
           let sorted =
@@ -91,7 +116,17 @@ fn do_refresh(model: Model) -> Model {
           Model(..model, table_data: Some(sorted))
         }
         Ok(data), None -> Model(..model, table_data: Some(data))
-        Error(_), _ -> Model(None, None, None, None, api.Descending)
+        Error(_), _ ->
+          Model(
+            None,
+            [],
+            None,
+            common.refresh_interval_default,
+            None,
+            None,
+            None,
+            api.Descending,
+          )
       }
     }
     _ -> model
@@ -103,7 +138,7 @@ fn update(model: Model, msg: Msg) {
     Refresh -> #(
       do_refresh(model),
       common.emit_after(
-        common.refresh_interval,
+        model.refresh_interval,
         Refresh,
         model.subject,
         CreatedSubject,
@@ -146,7 +181,7 @@ fn view(model: Model) -> Element(Msg) {
 fn render_table_data(model: Model, table: api.Table, data: api.TableData) {
   case data.max_length == 0 {
     True ->
-      html.div([attribute.class("ets-table-error")], [
+      html.div([attribute.class("component-error")], [
         html.text("No data in table "),
         display.atom(table.name),
       ])

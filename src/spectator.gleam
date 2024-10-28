@@ -1,6 +1,9 @@
+import gleam/bool
 import gleam/bytes_builder
 import gleam/dynamic
 import gleam/erlang
+import gleam/erlang/atom
+import gleam/erlang/node
 import gleam/erlang/process
 import gleam/http
 import gleam/http/request.{type Request}
@@ -12,6 +15,7 @@ import gleam/option
 import gleam/otp/actor
 import gleam/otp/static_supervisor as sup
 import gleam/result
+import gleam/uri
 import lustre
 import lustre/attribute
 import lustre/element
@@ -26,6 +30,13 @@ import spectator/internal/components/ets_table_live
 import spectator/internal/components/ports_live
 import spectator/internal/components/processes_live
 import spectator/internal/views/navbar
+
+/// Entrypoint for running spectator from the command line.
+/// This will start the spectator application on port 3000 and never return.
+pub fn main() {
+  let assert Ok(_) = start()
+  process.sleep_forever()
+}
 
 fn start_server(port: Int) -> Result(process.Pid, Nil) {
   // Start mist server
@@ -53,7 +64,7 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
           connect_server_component(req, ets_overview_live.app, query_params)
         ["ets-feed", table] ->
           connect_server_component(req, ets_table_live.app, [
-            #("table_name", table),
+            #("table_name", uri.percent_decode(table) |> result.unwrap("")),
             ..query_params
           ])
         ["port-feed"] ->
@@ -96,6 +107,8 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
         <> address
         <> ":"
         <> int.to_string(port)
+        <> " - Node: "
+        <> atom.to_string(node.self() |> node.to_atom())
       io.println(message)
     })
     |> mist.port(port)
@@ -108,8 +121,7 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
       tag(server_pid, "__spectator_internal Server")
       Ok(server_pid)
     }
-    Error(e) -> {
-      io.debug(#("Failed to start spectator mist server ", e))
+    Error(_e) -> {
       Error(Nil)
     }
   }
@@ -159,6 +171,52 @@ pub fn tag_result(
   }
 }
 
+type NodeConnectionError {
+  NotDistributedError
+  FailedToSetCookieError
+  FailedToConnectError
+}
+
+fn validate_node_connection(
+  params: common.Params,
+) -> Result(String, NodeConnectionError) {
+  let node_res = common.get_param(params, "node")
+  case node_res {
+    // No node passed, that's fine, we'll just use the local node
+    // no other checks are needed
+    Error(_) -> Ok("")
+    Ok(node) -> {
+      let self = node.self() |> node.to_atom()
+      use <- bool.guard(
+        self == atom.create_from_string("nonode@nohost"),
+        Error(NotDistributedError),
+      )
+
+      let node_atom = atom.create_from_string(node)
+      // Try setting the cookie if one is passed,
+      // but proceed regardless of the outcome
+      let cookie_validation_passed = case common.get_param(params, "cookie") {
+        // No cookie, validation passes
+        Error(_) -> True
+        Ok(cookie) -> {
+          let cookie_atom = atom.create_from_string(cookie)
+          api.set_cookie(node_atom, cookie_atom)
+        }
+      }
+
+      use <- bool.guard(
+        !cookie_validation_passed,
+        Error(FailedToSetCookieError),
+      )
+      use <- bool.guard(
+        !api.hidden_connect_node(node_atom),
+        Error(FailedToConnectError),
+      )
+      Ok("🟢 " <> atom.to_string(node_atom))
+    }
+  }
+}
+
 fn render_server_component(
   title: String,
   server_component_path path: String,
@@ -166,27 +224,80 @@ fn render_server_component(
 ) {
   let res = response.new(200)
   let styles = common.static_file("styles.css")
-  let html =
-    html([], [
-      html.head([], [
-        html.title([], title),
-        server_component.script(),
-        html.link([
-          attribute.rel("icon"),
-          attribute.href("/favicon.svg"),
-          attribute.type_("image/svg+xml"),
+  let html = case validate_node_connection(params) {
+    Ok(connection_name) -> {
+      html([], [
+        html.head([], [
+          html.title([], title),
+          server_component.script(),
+          html.meta([attribute.attribute("charset", "utf-8")]),
+          html.link([
+            attribute.rel("icon"),
+            attribute.href("/favicon.svg"),
+            attribute.type_("image/svg+xml"),
+          ]),
+          html.style([], styles),
         ]),
-        html.style([], styles),
-      ]),
-      html.body([], [
-        navbar.render(title),
-        element.element(
-          "lustre-server-component",
-          [server_component.route("/" <> path <> common.encode_params(params))],
-          [],
-        ),
-      ]),
-    ])
+        html.body([], [
+          navbar.render(
+            title,
+            connection_name,
+            common.sanitize_params(params)
+              |> common.encode_params(),
+          ),
+          element.element(
+            "lustre-server-component",
+            [
+              server_component.route(
+                "/" <> path <> common.encode_params(params),
+              ),
+            ],
+            [],
+          ),
+        ]),
+      ])
+    }
+    Error(connection_error) -> {
+      html([], [
+        html.head([], [
+          html.title([], title),
+          html.meta([attribute.attribute("charset", "utf-8")]),
+          html.link([
+            attribute.rel("icon"),
+            attribute.href("/favicon.svg"),
+            attribute.type_("image/svg+xml"),
+          ]),
+          html.style([], styles),
+        ]),
+        html.body([], [
+          navbar.render(
+            title,
+            "Connection Failed",
+            common.sanitize_params(params)
+              |> common.encode_params(),
+          ),
+          html.div([attribute.class("component-error")], [
+            html.div([], [html.text("Node connection failed:")]),
+            html.div([], [
+              html.text(case connection_error {
+                NotDistributedError ->
+                  "Node is not distributed, cannot connect to other nodes. Please start the spectator instance in distributed mode by setting a node name."
+                FailedToSetCookieError ->
+                  "Failed to set cookie, could not apply the cookie to the node"
+                FailedToConnectError ->
+                  "Failed to connect to node, please check the node name and cookie"
+              }),
+            ]),
+            html.div([], [
+              html.a([attribute.href("/"), attribute.class("button")], [
+                html.text("Return to local node"),
+              ]),
+            ]),
+          ]),
+        ]),
+      ])
+    }
+  }
   response.set_body(
     res,
     html
@@ -207,9 +318,7 @@ fn connect_server_component(
     let self = process.new_subject()
     let app = lustre_application()
     let assert Ok(live_component) = lustre.start_actor(app, params)
-
     tag_subject(live_component, "__spectator_internal Server Component")
-
     process.send(
       live_component,
       server_component.subscribe(

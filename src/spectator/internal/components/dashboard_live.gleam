@@ -1,11 +1,14 @@
+import gleam/erlang/atom
 import gleam/erlang/process
 import gleam/int
 import gleam/option.{type Option, None, Some}
+import gleam/result
 import lustre
 import lustre/attribute
 import lustre/effect
 import lustre/element.{type Element}
 import lustre/element/html
+import lustre/event
 import spectator/internal/api
 import spectator/internal/common
 import spectator/internal/views/charts.{ChartSegment}
@@ -21,11 +24,17 @@ pub fn app() {
 
 pub opaque type Model {
   Model(
+    node: api.ErlangNode,
+    params: common.Params,
     subject: Option(process.Subject(Msg)),
+    refresh_interval: Int,
     memory_stats: Option(api.MemoryStatistics),
     memory_relative: Option(RelativeMemoryStatistics),
     system_info: Option(api.SystemInfo),
     system_limits: Option(RelativeSystemLimits),
+    node_input: String,
+    cookie_input: String,
+    refresh_input: String,
   )
 }
 
@@ -49,17 +58,32 @@ type RelativeSystemLimits {
   RelativeSystemLimits(processes: Float, ports: Float, atoms: Float, ets: Float)
 }
 
-fn init(_params: common.Params) -> #(Model, effect.Effect(Msg)) {
-  #(
+fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
+  let node = api.node_from_params(params)
+  let node_input = case node {
+    Some(n) -> atom.to_string(n)
+    None -> ""
+  }
+  let refresh_interval = common.get_refresh_interval(params)
+  let cookie_input = common.get_param(params, "cookie") |> result.unwrap("")
+  let initial_model =
     do_refresh(Model(
+      node:,
+      params: common.sanitize_params(params),
       subject: None,
+      refresh_interval:,
       memory_stats: None,
       memory_relative: None,
       system_info: None,
       system_limits: None,
-    )),
+      node_input: node_input,
+      cookie_input: cookie_input,
+      refresh_input: int.to_string(refresh_interval),
+    ))
+  #(
+    initial_model,
     common.emit_after(
-      common.refresh_interval,
+      initial_model.refresh_interval,
       Refresh,
       option.None,
       CreatedSubject,
@@ -72,6 +96,9 @@ fn init(_params: common.Params) -> #(Model, effect.Effect(Msg)) {
 pub opaque type Msg {
   Refresh
   CreatedSubject(process.Subject(Msg))
+  NodeInputChanged(String)
+  CookieInputChanged(String)
+  RefreshInputChanged(String)
 }
 
 fn get_relative_memory_stats(input: api.MemoryStatistics) {
@@ -114,12 +141,16 @@ fn get_relative_system_limits(input: api.SystemInfo) {
 }
 
 fn do_refresh(model: Model) -> Model {
-  let memory_stats = api.get_memory_statistics() |> option.from_result
+  let memory_stats =
+    api.get_memory_statistics(model.node)
+    |> option.from_result
   let memory_relative = case memory_stats {
     None -> None
     Some(stats) -> Some(get_relative_memory_stats(stats))
   }
-  let system_info = api.get_system_info() |> option.from_result
+  let system_info =
+    api.get_system_info(model.node)
+    |> option.from_result
   let system_limits = case system_info {
     None -> None
     Some(info) -> Some(get_relative_system_limits(info))
@@ -129,11 +160,14 @@ fn do_refresh(model: Model) -> Model {
 
 fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
   case msg {
+    NodeInputChanged(n) -> #(Model(..model, node_input: n), effect.none())
+    CookieInputChanged(c) -> #(Model(..model, cookie_input: c), effect.none())
+    RefreshInputChanged(r) -> #(Model(..model, refresh_input: r), effect.none())
     Refresh -> {
       #(
         do_refresh(model),
         common.emit_after(
-          common.refresh_interval,
+          model.refresh_interval,
           Refresh,
           model.subject,
           CreatedSubject,
@@ -161,6 +195,35 @@ fn view(model: Model) -> Element(Msg) {
         split_section(
           [
             // Left
+            html.h1([], [html.text("Inspect BEAM Nodes")]),
+            html.div([attribute.class("info-container")], [
+              // info_item("Currently Inspecting", case model.node {
+              //   Some(n) -> atom.to_string(n)
+              //   None -> "Self (The node running spectator)"
+              // }),
+              info_field(
+                "Node",
+                case model.node_input {
+                  "" -> "Enter node name..."
+                  n -> n
+                },
+                NodeInputChanged,
+              ),
+              info_field(
+                "Cookie",
+                case model.cookie_input {
+                  "" -> "Enter cookie or leave empty"
+                  n -> n
+                },
+                CookieInputChanged,
+              ),
+              info_field(
+                "Refresh Interval (ms)",
+                model.refresh_input,
+                RefreshInputChanged,
+              ),
+              target_actions(model),
+            ]),
             html.h1([], [html.text("System Information")]),
             html.div([attribute.class("info-container")], [
               info_item("Uptime", system_info.uptime),
@@ -238,6 +301,39 @@ fn info_item(label, value) {
   html.div([attribute.class("info-item")], [
     html.div([attribute.class("info-label")], [html.text(label)]),
     html.div([attribute.class("info-value")], [html.text(value)]),
+  ])
+}
+
+fn info_field(label, default_value, handler) {
+  html.div([attribute.class("info-item")], [
+    html.label([attribute.class("info-label")], [html.text(label)]),
+    html.input([
+      event.on_input(handler),
+      attribute.class("info-value"),
+      attribute.placeholder(default_value),
+    ]),
+  ])
+}
+
+fn target_actions(model: Model) {
+  html.div([attribute.class("info-item")], [
+    html.a([attribute.class("button"), attribute.href("/dashboard")], [
+      html.text("Reset to Self"),
+    ]),
+    html.a(
+      [
+        attribute.class("button"),
+        attribute.href(
+          "/dashboard"
+          <> []
+          |> common.add_param("node", model.node_input)
+          |> common.add_param("cookie", model.cookie_input)
+          |> common.add_param("refresh", model.refresh_input)
+          |> common.encode_params(),
+        ),
+      ],
+      [html.text("Inspect Target")],
+    ),
   ])
 }
 

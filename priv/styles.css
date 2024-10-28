@@ -49,6 +49,10 @@
   color: var(--background);
 }
 
+input:focus{
+  outline: none;
+}
+
 html,
 body {
   margin: 0;
@@ -70,15 +74,46 @@ dt {
   margin-bottom: 5px;
 }
 
-button {
+button,
+.button {
   background: var(--background);
   border: 1px solid var(--text);
   color: var(--text);
+  padding: 1px 4px;
+  text-decoration: none;
 }
 
-button:hover {
+button:hover,
+.button:hover {
   background: var(--text);
   color: var(--background);
+}
+
+.interactive-primitive {
+  cursor: pointer;
+  background: unset;
+  color: var(--text);
+  text-decoration: underline;
+  border: 0;
+  padding: 0;
+}
+
+.interactive-primitive:hover {
+  background: var(--text);
+  color: var(--background);
+}
+
+.interactive-primitive.block {
+  display: block;
+}
+
+.interactive-primitive.tagged {
+  color: var(--text-hightlight);
+}
+
+.interactive-primitive.tagged:hover {
+  color: var(--background);
+  background: var(--text-hightlight);
 }
 
 /* Top Navigational Bar  */
@@ -145,31 +180,12 @@ button:hover {
   height: 3em;
 }
 
-.interactive-primitive {
-  cursor: pointer;
-  background: unset;
-  color: var(--text);
-  text-decoration: underline;
-  border: 0;
-  padding: 0;
-}
-
-.interactive-primitive:hover {
-  background: var(--text);
-  color: var(--background);
-}
-
-.interactive-primitive.block {
-  display: block;
-}
-
-.interactive-primitive.tagged {
-  color: var(--text-hightlight);
-}
-
-.interactive-primitive.tagged:hover {
-  color: var(--background);
-  background: var(--text-hightlight);
+.connection-status {
+  border-bottom: 1px solid var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
 }
 
 /* Table View */
@@ -312,6 +328,9 @@ tbody tr.tagged.selected {
   display: flex;
   justify-content: center;
   align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 /* Process Details View */
@@ -423,9 +442,21 @@ table.ets-data tbody tr:hover {
   border-bottom: 0;
 }
 
-.info-item>div {
+.info-item>* {
   flex-basis: 50%;
   padding: 5px;
+  border: 0;
+  background: var(--background);
+  color: var(--text);
+}
+
+.info-item>a {
+  text-align: center;
+  user-select: none;
+}
+
+.info-item>a:first-child {
+  border-right: 1px solid var(--text);
 }
 
 .info-label {
@@ -444,7 +475,7 @@ table.ets-data tbody tr:hover {
   gap: 10px
 }
 
-.limit-item{
+.limit-item {
   margin-bottom: 10px;
 }
 

@@ -118,36 +118,34 @@ fn icon() {
   )
 }
 
-fn tab(title: String, current: String, path: String) {
+fn tab(title: String, current: String, path: String, query_string: String) {
   let classes = case title == current {
     True -> "tab active"
     False -> "tab"
   }
 
-  case path {
-    "" ->
-      html.div([attribute.class(classes <> " disabled")], [html.text(title)])
-    _ ->
-      html.a([attribute.class(classes), attribute.href(path)], [
-        html.text(title),
-      ])
-  }
+  html.a([attribute.class(classes), attribute.href(path <> query_string)], [
+    html.text(title),
+  ])
 }
 
-pub fn render(current_tab: String) {
+pub fn render(current_tab: String, connection_status, query_string: String) {
   html.nav([attribute.class("topbar")], [
     html.div([attribute.class("logo")], [icon(), html.text("Spectator")]),
     html.div([attribute.class("filler")], []),
     html.div([attribute.class("tabs")], [
-      tab("Dashboard", current_tab, "/dashboard"),
+      tab("Dashboard", current_tab, "/dashboard", query_string),
       html.div([attribute.class("separator")], []),
-      tab("Processes", current_tab, "/processes"),
+      tab("Processes", current_tab, "/processes", query_string),
       html.div([attribute.class("separator")], []),
-      tab("ETS", current_tab, "/ets"),
+      tab("ETS", current_tab, "/ets", query_string),
       html.div([attribute.class("separator")], []),
-      tab("Ports", current_tab, "/ports"),
+      tab("Ports", current_tab, "/ports", query_string),
       html.div([attribute.class("separator")], []),
     ]),
     html.div([attribute.class("filler")], []),
+    html.div([attribute.class("connection-status")], [
+      html.text(connection_status),
+    ]),
   ])
 }

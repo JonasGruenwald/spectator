@@ -3,6 +3,7 @@
 
 packages = [
   { name = "birl", version = "1.7.1", build_tools = ["gleam"], requirements = ["gleam_stdlib", "ranger"], otp_app = "birl", source = "hex", outer_checksum = "5C66647D62BCB11FE327E7A6024907C4A17954EF22865FE0940B54A852446D01" },
+  { name = "carpenter", version = "0.3.1", build_tools = ["gleam"], requirements = ["gleam_erlang", "gleam_stdlib"], otp_app = "carpenter", source = "hex", outer_checksum = "7F5AF15A315CF32E8EDD0700BC1E6711618F8049AFE66DFCE82D1161B33F7F1B" },
   { name = "chrobot", version = "3.0.2", build_tools = ["gleam"], requirements = ["filepath", "gleam_community_ansi", "gleam_erlang", "gleam_http", "gleam_httpc", "gleam_json", "gleam_otp", "gleam_stdlib", "simplifile", "spinner"], otp_app = "chrobot", source = "hex", outer_checksum = "7D710085DD7BECE05EF089B01717E59F66CAA5872B73883C66CAC3FA2055359D" },
   { name = "filepath", version = "1.0.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "filepath", source = "hex", outer_checksum = "EFB6FF65C98B2A16378ABC3EE2B14124168C0CE5201553DE652E2644DCFDB594" },
   { name = "glam", version = "2.0.1", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "glam", source = "hex", outer_checksum = "66EC3BCD632E51EED029678F8DF419659C1E57B1A93D874C5131FE220DFAD2B2" },
@@ -33,6 +34,7 @@ packages = [
 ]
 
 [requirements]
+carpenter = { version = ">= 0.3.1 and < 1.0.0" }
 chrobot = { version = ">= 3.0.1 and < 4.0.0" }
 gleam_erlang = { version = ">= 0.27.0 and < 1.0.0" }
 gleam_http = { version = ">= 3.7.0 and < 4.0.0" }

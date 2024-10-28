@@ -1,15 +1,8 @@
+import carpenter/table
 import gleam/erlang/atom
 import gleam/erlang/process
-import gleam/int
 import spectator
-import spectator/internal/api
 import utils/pantry
-
-fn keep_adding_to_table(ets_table: atom.Atom, count: Int) {
-  api.ets_insert(ets_table, [#(count, "Row number " <> int.to_string(count))])
-  process.sleep(1000)
-  keep_adding_to_table(ets_table, count + 1)
-}
 
 pub fn main() {
   // Start the spectator service
@@ -42,27 +35,13 @@ pub fn main() {
     atom.create_from_string("registered_actor"),
   )
 
-  // Create an ETS table
+  //  Create some tables
+  let assert Ok(t1) =
+    table.build("https://table-is-not-urlsafe/lol.com?query=1")
+    |> table.set
 
-  let assert Ok(table1) =
-    api.new_ets_table(atom.create_from_string("test_table"))
-  api.ets_insert(table1, [#(1, "one"), #(2, "two"), #(3, "three"), #(4, "four")])
-
-  let assert Ok(table2) =
-    api.new_ets_table(atom.create_from_string(
-      "https://table-is-not-urlsafe/lol.com?query=1",
-    ))
-  api.ets_insert(table2, [#("Wibble", "Wobble")])
-
-  let assert Ok(table3) =
-    api.new_ets_table(atom.create_from_string("Wibble Wooble"))
-  process.start(fn() { keep_adding_to_table(table3, 1) }, False)
-  |> spectator.tag("Rogue ETS Process")
-
-  // Start another OTP actor and tag it for spectator
-  // let assert Ok(_browser) =
-  //   chrobot.launch()
-  //   |> spectator.tag_result("Chrobot Browser")
+  t1
+  |> table.insert([#("hello", "joe")])
 
   // let assert Ok(_) = chrobot.open(browser, "http://127.0.0.1:3000/processes/", 5_000)
   // Sleep on the main process so the program doesn't exit

@@ -1,8 +1,8 @@
 import gleam/erlang
 import gleam/erlang/process
+import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
-import gleam/string_builder
 import gleam/uri
 import lustre/effect
 import lustre/server_component
@@ -10,7 +10,7 @@ import simplifile
 
 pub const message_queue_threshold = 10
 
-pub const refresh_interval = 1000
+pub const refresh_interval_default = 1000
 
 pub const colour_process = "#EF5976"
 
@@ -28,32 +28,49 @@ pub type Params =
   List(#(String, String))
 
 pub fn encode_params(params: Params) -> String {
-  let pair = fn(t: #(String, String)) {
-    string_builder.from_strings([
-      uri.percent_encode(t.0),
-      "=",
-      uri.percent_encode(t.1),
-    ])
-  }
   case params {
     [] -> ""
-    _ ->
-      params
-      |> list.map(pair)
-      |> list.intersperse(string_builder.from_string("&"))
-      |> string_builder.concat
-      |> string_builder.prepend("?")
-      |> string_builder.to_string
+    _ -> "?" <> uri.query_to_string(params)
+  }
+}
+
+pub fn add_param(params: Params, key: String, value: String) -> Params {
+  case value {
+    "" -> params
+    _ -> [#(key, value), ..params]
   }
 }
 
 pub fn get_param(params: Params, key: String) -> Result(String, Nil) {
   list.find_map(params, fn(p) {
     case p {
-      #(k, v) if k == key -> uri.percent_decode(v)
+      #(k, "") if k == key -> Error(Nil)
+      #(k, v) if k == key -> Ok(v)
       _ -> Error(Nil)
     }
   })
+}
+
+pub fn sanitize_params(params: Params) -> Params {
+  list.filter_map(params, fn(p) {
+    case p {
+      #("node", _) -> Ok(p)
+      #("cookie", _) -> Ok(p)
+      #("refresh", _) -> Ok(p)
+      _ -> Error(Nil)
+    }
+  })
+}
+
+pub fn get_refresh_interval(params: Params) -> Int {
+  case get_param(params, "refresh") {
+    Ok(rate) ->
+      case int.parse(rate) {
+        Ok(r) -> r
+        Error(_) -> refresh_interval_default
+      }
+    Error(_) -> refresh_interval_default
+  }
 }
 
 @external(erlang, "spectator_ffi", "truncate_float")
