@@ -20,10 +20,7 @@ This is a work in progress, so far it has the following features:
 - List of active ports
 - Clickable links between resources
 - Dashboard with basic statistics
-
-The goal is to extend it with these features in the future:
-
-- [ ] Inspect other Erlang nodes 
+- Inspect other BEAM nodes
 
 ## Installation
 
