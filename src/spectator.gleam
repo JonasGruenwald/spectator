@@ -71,18 +71,16 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
           connect_server_component(req, ports_live.app, query_params)
         // Static files
         ["favicon.svg"] -> {
-          let assert Ok(priv) = erlang.priv_directory("spectator")
-          let path = priv <> "/lucy_spectator.svg"
-          mist.send_file(path, offset: 0, limit: option.None)
-          |> result.map(fn(favicon) {
-            response.new(200)
-            |> response.prepend_header("content-type", "image/svg+xml")
-            |> response.set_body(favicon)
-          })
-          |> result.lazy_unwrap(fn() {
-            response.new(404)
-            |> response.set_body(mist.Bytes(bytes_builder.new()))
-          })
+          return_static("/lucy_spectator.svg", "image/svg+xml")
+        }
+        ["styles.css"] -> {
+          return_static("/styles.css", "text/css")
+        }
+        ["lustre-server-component.mjs"] -> {
+          return_static(
+            "/lustre-server-component.mjs",
+            "application/javascript",
+          )
         }
         // Redirect to dashboard by default
         [] -> {
@@ -217,26 +215,47 @@ fn validate_node_connection(
   }
 }
 
+//  WEB RESPONSES ----------------------------------------------------------
+fn return_static(file_path: String, content_type: String) {
+  let assert Ok(priv) = erlang.priv_directory("spectator")
+  let path = priv <> file_path
+  mist.send_file(path, offset: 0, limit: option.None)
+  |> result.map(fn(favicon) {
+    response.new(200)
+    |> response.prepend_header("content-type", content_type)
+    |> response.set_body(favicon)
+  })
+  |> result.lazy_unwrap(fn() {
+    response.new(404)
+    |> response.set_body(mist.Bytes(bytes_builder.new()))
+  })
+}
+
 fn render_server_component(
   title: String,
   server_component_path path: String,
   params params: common.Params,
 ) {
   let res = response.new(200)
-  let styles = common.static_file("styles.css")
   let html = case validate_node_connection(params) {
     Ok(connection_name) -> {
       html([], [
         html.head([], [
           html.title([], title),
-          server_component.script(),
+          html.script(
+            [
+              attribute.type_("module"),
+              attribute.src("/lustre-server-component.mjs"),
+            ],
+            "",
+          ),
           html.meta([attribute.attribute("charset", "utf-8")]),
           html.link([
             attribute.rel("icon"),
             attribute.href("/favicon.svg"),
             attribute.type_("image/svg+xml"),
           ]),
-          html.style([], styles),
+          html.link([attribute.rel("stylesheet"), attribute.href("/styles.css")]),
         ]),
         html.body([], [
           navbar.render(
@@ -267,7 +286,7 @@ fn render_server_component(
             attribute.href("/favicon.svg"),
             attribute.type_("image/svg+xml"),
           ]),
-          html.style([], styles),
+          html.link([attribute.rel("stylesheet"), attribute.href("/styles.css")]),
         ]),
         html.body([], [
           navbar.render(
