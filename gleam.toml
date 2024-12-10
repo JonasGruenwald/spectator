@@ -1,11 +1,11 @@
 name = "spectator"
-version = "1.4.1"
+version = "1.4.2"
 description = "BEAM observer tool"
 licences = ["MIT"]
 repository = { type = "github", user = "JonasGruenwald", repo = "spectator" }
 
 [dependencies]
-gleam_stdlib = ">= 0.34.0 and < 2.0.0"
+gleam_stdlib = ">= 0.47.0 and < 2.0.0"
 gleam_erlang = ">= 0.27.0 and < 1.0.0"
 gleam_otp = ">= 0.12.1 and < 1.0.0"
 lustre = ">= 4.5.1 and < 5.0.0"

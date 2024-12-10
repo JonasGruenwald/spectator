@@ -1,5 +1,5 @@
 import gleam/bool
-import gleam/bytes_builder
+import gleam/bytes_tree
 import gleam/dynamic
 import gleam/erlang
 import gleam/erlang/atom
@@ -40,7 +40,7 @@ pub fn main() {
 
 fn start_server(port: Int) -> Result(process.Pid, Nil) {
   // Start mist server
-  let empty_body = mist.Bytes(bytes_builder.new())
+  let empty_body = mist.Bytes(bytes_tree.new())
   let not_found = response.set_body(response.new(404), empty_body)
   let server_result =
     fn(req: Request(Connection)) -> Response(ResponseData) {
@@ -81,7 +81,7 @@ fn start_server(port: Int) -> Result(process.Pid, Nil) {
           })
           |> result.lazy_unwrap(fn() {
             response.new(404)
-            |> response.set_body(mist.Bytes(bytes_builder.new()))
+            |> response.set_body(mist.Bytes(bytes_tree.new()))
           })
         }
         // Redirect to dashboard by default
@@ -302,7 +302,7 @@ fn render_server_component(
     res,
     html
       |> element.to_document_string
-      |> bytes_builder.from_string
+      |> bytes_tree.from_string
       |> mist.Bytes,
   )
 }

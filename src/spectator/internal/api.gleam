@@ -1,4 +1,3 @@
-import gleam/bool
 import gleam/dynamic
 import gleam/erlang
 import gleam/erlang/atom
@@ -442,13 +441,13 @@ pub fn sort_table_list(
     }
     SortByTableReadConcurrency -> {
       list.sort(input, fn(a, b) {
-        bool.compare(a.read_concurrency, b.read_concurrency)
+        common.bool_compare(a.read_concurrency, b.read_concurrency)
         |> apply_direction(direction)
       })
     }
     SortByTableWriteConcurrency -> {
       list.sort(input, fn(a, b) {
-        bool.compare(a.write_concurrency, b.write_concurrency)
+        common.bool_compare(a.write_concurrency, b.write_concurrency)
         |> apply_direction(direction)
       })
     }
