@@ -1,9 +1,9 @@
-import gleam/order
 import gleam/erlang
 import gleam/erlang/process
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/order
 import gleam/uri
 import lustre/effect
 import lustre/server_component
