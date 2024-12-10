@@ -3,6 +3,7 @@ import gleam/erlang/process
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/order
 import gleam/uri
 import lustre/effect
 import lustre/server_component
@@ -106,5 +107,14 @@ pub fn emit_after(
       dispatch(subject_created_message(subject))
       selector
     }
+  }
+}
+
+pub fn bool_compare(a: Bool, with b: Bool) -> order.Order {
+  case a, b {
+    True, True -> order.Eq
+    True, False -> order.Gt
+    False, False -> order.Eq
+    False, True -> order.Lt
   }
 }

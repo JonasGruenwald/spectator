@@ -467,7 +467,7 @@ pub fn get_system_info_test() {
     |> should.be_ok()
 
   info.otp_release
-  |> should.equal("26")
+  |> should.equal("27")
 }
 
 // ------- TAG MANAGER GEN_SERVER
