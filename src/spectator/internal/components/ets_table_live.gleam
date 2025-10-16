@@ -50,7 +50,11 @@ fn get_initial_data(params: common.Params) -> Result(Model, api.ErlangError) {
     |> result.replace_error(api.ReturnedUndefinedError),
   )
 
-  let table_atom = atom.create(table_name)
+  use table_atom <- result.try(
+    atom.get(table_name)
+    |> result.replace_error(api.ReturnedUndefinedError),
+  )
+
   use table <- result.try(
     result.lazy_or(api.get_ets_table_info(node, table_atom), fn() {
       get_ets_table_info_from_list(node, table_atom)
