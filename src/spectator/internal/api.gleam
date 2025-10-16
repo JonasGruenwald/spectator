@@ -579,7 +579,6 @@ pub fn request_otp_data(
       Ok(status) -> {
         let state =
           get_state(node, proc, 100)
-          // TODO: questionable?
           |> result.unwrap(from(option.None))
 
         callback(OtpDetails(pid: proc, status:, state:))

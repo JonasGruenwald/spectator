@@ -1,6 +1,5 @@
 import gleam/bool
 import gleam/bytes_tree
-import gleam/dynamic
 import gleam/erlang/application
 import gleam/erlang/atom
 import gleam/erlang/node
@@ -309,10 +308,10 @@ fn render_server_component(
 
 //  SERVER COMPONENT WIRING ----------------------------------------------------
 
-type Socket(c) {
+type Socket(a) {
   Socket(
-    component: lustre.Runtime(c),
-    self: process.Subject(server_component.ClientMessage(c)),
+    component: lustre.Runtime(a),
+    self: process.Subject(server_component.ClientMessage(a)),
   )
 }
 
@@ -325,35 +324,21 @@ fn connect_server_component(
     let self = process.new_subject()
     let app = lustre_application()
 
-    let assert Ok(live_component) = lustre.start_server_component(app, params)
+    let assert Ok(component) = lustre.start_server_component(app, params)
 
     tag_subject(
-      server_component.subject(live_component),
+      server_component.subject(component),
       "__spectator_internal Server Component",
     )
 
     server_component.register_subject(self)
-    |> lustre.send(to: live_component)
+    |> lustre.send(to: component)
 
-    // process.send(
-    //   live_component_subject,
-    //   server_component.subscribe(
-    //     // server components can have many connected clients, so we need a way to
-    //     // identify this client.
-    //     "ws",
-    //     process.send(self, _),
-    //   ),
-    // )
-
-    #(
-      // we store the server component's `Subject` as this socket's state so we
-      // can shut it down when the socket is closed.
-      Socket(component: live_component, self:),
-      option.Some(process.select(process.new_selector(), self)),
-    )
+    let selector = process.new_selector() |> process.select(self)
+    #(Socket(component:, self:), option.Some(selector))
   }
 
-  let socket_update = fn(socket: Socket(d), msg, conn: WebsocketConnection) {
+  let socket_update = fn(state: Socket(a), msg, conn) {
     case msg {
       mist.Text(json) -> {
         // we attempt to decode the incoming text as an action to send to our
@@ -362,14 +347,14 @@ fn connect_server_component(
           json.parse(json, server_component.runtime_message_decoder())
 
         case action {
-          Ok(action) -> lustre.send(socket.component, action)
+          Ok(action) -> lustre.send(state.component, action)
           Error(_) -> Nil
         }
 
-        mist.continue(socket)
+        mist.continue(state)
       }
 
-      mist.Binary(_) -> mist.continue(socket)
+      mist.Binary(_) -> mist.continue(state)
       mist.Custom(patch) -> {
         let assert Ok(_) =
           patch
@@ -377,21 +362,21 @@ fn connect_server_component(
           |> json.to_string
           |> mist.send_text_frame(conn, _)
 
-        mist.continue(socket)
+        mist.continue(state)
       }
       mist.Closed | mist.Shutdown -> mist.stop()
     }
   }
 
-  let socket_close = fn(socket: Socket(c)) -> Nil {
-    server_component.deregister_subject(socket.self)
-    |> lustre.send(to: socket.component)
+  let socket_close = fn(state: Socket(a)) {
+    server_component.deregister_subject(state.self)
+    |> lustre.send(to: state.component)
   }
 
   mist.websocket(
     request: req,
     on_init: socket_init,
-    on_close: socket_close,
     handler: socket_update,
+    on_close: socket_close,
   )
 }

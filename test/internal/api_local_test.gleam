@@ -5,10 +5,8 @@ import gleam/dynamic
 import gleam/erlang/atom
 import gleam/erlang/port
 import gleam/erlang/process
-import gleam/function
 import gleam/list
 import gleam/option.{None, Some}
-import gleam/set
 import gleeunit/should
 import spectator/internal/api
 import utils/pantry
@@ -445,9 +443,9 @@ pub fn get_word_size_test() {
 }
 
 pub fn get_system_info_test() {
-  // let info =
   api.get_system_info(None)
   |> should.be_ok()
+  // NOTE: This could be different depending on the OTP version
   // info.otp_release
   // |> should.equal("27")
 }
