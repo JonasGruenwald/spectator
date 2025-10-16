@@ -1,8 +1,8 @@
 import gleam/dynamic
-import gleam/erlang
 import gleam/erlang/atom
 import gleam/erlang/port
 import gleam/erlang/process
+import gleam/erlang/reference
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -59,7 +59,7 @@ pub type SystemPrimitive {
 /// https://www.erlang.org/doc/apps/stdlib/ets.html#info/2
 pub type Table {
   Table(
-    id: erlang.Reference,
+    id: reference.Reference,
     name: atom.Atom,
     table_type: atom.Atom,
     size: Int,
@@ -571,23 +571,25 @@ pub fn request_otp_data(
   proc: process.Pid,
   callback: fn(OtpDetails) -> Nil,
 ) {
-  process.start(
-    fn() {
-      case get_status(node, proc, 100) {
-        Error(_) -> {
-          Nil
-        }
-        Ok(status) -> {
-          let state =
-            get_state(node, proc, 100)
-            |> result.unwrap(dynamic.from(option.None))
-          callback(OtpDetails(pid: proc, status:, state:))
-        }
+  process.spawn_unlinked(fn() {
+    case get_status(node, proc, 100) {
+      Error(_) -> {
+        Nil
       }
-    },
-    False,
-  )
+      Ok(status) -> {
+        let state =
+          get_state(node, proc, 100)
+          // TODO: questionable?
+          |> result.unwrap(from(option.None))
+
+        callback(OtpDetails(pid: proc, status:, state:))
+      }
+    }
+  })
 }
+
+@external(erlang, "gleam@function", "identity")
+fn from(a: anything) -> dynamic.Dynamic
 
 @external(erlang, "spectator_ffi", "get_status")
 pub fn get_status(
@@ -645,7 +647,7 @@ pub fn get_ets_table_info(
 @external(erlang, "spectator_ffi", "get_ets_data")
 pub fn get_raw_ets_data(
   node: ErlangNode,
-  table: erlang.Reference,
+  table: reference.Reference,
 ) -> Result(List(List(OpaqueTuple)), ErlangError)
 
 @external(erlang, "spectator_ffi", "opaque_tuple_to_list")
@@ -797,7 +799,7 @@ pub fn set_cookie(
 
 pub fn node_from_params(params: common.Params) {
   case common.get_param(params, "node") {
-    Ok(node_raw) -> Some(atom.create_from_string(node_raw))
+    Ok(node_raw) -> Some(atom.create(node_raw))
     Error(_) -> None
   }
 }

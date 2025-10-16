@@ -26,14 +26,11 @@ pub fn main() {
     pantry.new()
     |> spectator.tag_result("Registered Pantry Actor")
   pantry.add_item(sub2, "Helllo")
-  let pid = process.subject_owner(sub2)
+  let assert Ok(pid) = process.subject_owner(sub2)
   // register the actor under a name
-  register(atom.create_from_string("registered_actor"), pid)
+  register(atom.create("registered_actor"), pid)
 
-  monitor_by_name(
-    atom.create_from_string("process"),
-    atom.create_from_string("registered_actor"),
-  )
+  monitor_by_name(atom.create("process"), atom.create("registered_actor"))
 
   //  Create some tables
   let assert Ok(t1) =
