@@ -40,7 +40,7 @@ pub fn get_process_list_test() {
   |> should.equal(#(atom.create("gleam_erlang_ffi"), atom.create("select"), 2))
 
   sample.info.initial_call
-  |> should.equal(#(atom.create("erlang"), atom.create("apply"), 2))
+  |> should.equal(#(atom.create("proc_lib"), atom.create("init_p"), 3))
 
   sample.info.registered_name
   |> should.be_none()
@@ -90,7 +90,7 @@ pub fn get_process_info_test() {
   |> should.equal(#(atom.create("gleam_erlang_ffi"), atom.create("select"), 2))
 
   info.initial_call
-  |> should.equal(#(atom.create("erlang"), atom.create("apply"), 2))
+  |> should.equal(#(atom.create("proc_lib"), atom.create("init_p"), 3))
 
   info.registered_name
   |> should.be_none()
@@ -443,9 +443,9 @@ pub fn get_word_size_test() {
 }
 
 pub fn get_system_info_test() {
+  // let info =
   api.get_system_info(None)
   |> should.be_ok()
-  // NOTE: This could be different depending on the OTP version
   // info.otp_release
   // |> should.equal("27")
 }
