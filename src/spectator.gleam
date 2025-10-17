@@ -371,6 +371,9 @@ fn connect_server_component(
   let socket_close = fn(state: Socket(a)) {
     server_component.deregister_subject(state.self)
     |> lustre.send(to: state.component)
+
+    lustre.shutdown()
+    |> lustre.send(to: state.component)
   }
 
   mist.websocket(
