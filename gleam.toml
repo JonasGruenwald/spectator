@@ -1,8 +1,14 @@
 name = "spectator"
-version = "1.4.3"
+version = "1.5.0"
 description = "BEAM observer tool"
 licences = ["MIT"]
 repository = { type = "github", user = "JonasGruenwald", repo = "spectator" }
+
+[documentation]
+pages = [
+  { title = "Changelog", path = "changelog.html", source = "./CHANGELOG.md" },
+]
+
 
 [dependencies]
 simplifile = ">= 2.2.0 and < 3.0.0"

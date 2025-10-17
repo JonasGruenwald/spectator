@@ -1,5 +1,6 @@
 //// Test cases that run api requests against the local node
 
+import gleam/int
 import carpenter/table
 import gleam/dynamic
 import gleam/erlang/atom
@@ -443,11 +444,13 @@ pub fn get_word_size_test() {
 }
 
 pub fn get_system_info_test() {
-  // let info =
-  api.get_system_info(None)
+  let info =
+    api.get_system_info(None)
+    |> should.be_ok()
+
+  info.otp_release
+  |> int.parse()
   |> should.be_ok()
-  // info.otp_release
-  // |> should.equal("27")
 }
 
 // ------- TAG MANAGER GEN_SERVER
