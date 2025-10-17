@@ -1,4 +1,4 @@
-import gleam/erlang
+import gleam/erlang/application
 import gleam/erlang/process
 import gleam/int
 import gleam/list
@@ -82,7 +82,7 @@ pub fn format_percentage(value: Float) -> String {
 }
 
 pub fn static_file(name: String) {
-  let assert Ok(priv) = erlang.priv_directory("spectator")
+  let assert Ok(priv) = application.priv_directory("spectator")
   let assert Ok(data) = simplifile.read(priv <> "/" <> name)
   data
 }
@@ -101,8 +101,9 @@ pub fn emit_after(
     }
     None -> {
       use dispatch, subject <- server_component.select
-      let selector =
-        process.new_selector() |> process.selecting(subject, fn(msg) { msg })
+
+      let selector = process.new_selector() |> process.select(subject)
+
       let _ = process.send_after(subject, delay, msg)
       dispatch(subject_created_message(subject))
       selector

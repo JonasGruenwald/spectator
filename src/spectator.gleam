@@ -1,7 +1,6 @@
 import gleam/bool
 import gleam/bytes_tree
-import gleam/dynamic
-import gleam/erlang
+import gleam/erlang/application
 import gleam/erlang/atom
 import gleam/erlang/node
 import gleam/erlang/process
@@ -14,7 +13,9 @@ import gleam/json
 import gleam/option
 import gleam/otp/actor
 import gleam/otp/static_supervisor as sup
+import gleam/otp/supervision
 import gleam/result
+import gleam/string
 import gleam/uri
 import lustre
 import lustre/attribute
@@ -38,93 +39,81 @@ pub fn main() {
   process.sleep_forever()
 }
 
-fn start_server(port: Int) -> Result(process.Pid, Nil) {
+fn start_server(port: Int) -> supervision.ChildSpecification(sup.Supervisor) {
   // Start mist server
   let empty_body = mist.Bytes(bytes_tree.new())
   let not_found = response.set_body(response.new(404), empty_body)
-  let server_result =
-    fn(req: Request(Connection)) -> Response(ResponseData) {
-      let query_params = request.get_query(req) |> result.unwrap([])
-      case request.path_segments(req) {
-        // App Routes
-        ["dashboard"] ->
-          render_server_component("Dashboard", "dashboard-feed", query_params)
-        ["processes"] ->
-          render_server_component("Processes", "process-feed", query_params)
-        ["ets"] -> render_server_component("ETS", "ets-feed", query_params)
-        ["ets", table] ->
-          render_server_component("ETS", "ets-feed/" <> table, query_params)
-        ["ports"] -> render_server_component("Ports", "port-feed", query_params)
-        // WebSocket Routes
-        ["dashboard-feed"] ->
-          connect_server_component(req, dashboard_live.app, query_params)
-        ["process-feed"] ->
-          connect_server_component(req, processes_live.app, query_params)
-        ["ets-feed"] ->
-          connect_server_component(req, ets_overview_live.app, query_params)
-        ["ets-feed", table] ->
-          connect_server_component(req, ets_table_live.app, [
-            #("table_name", uri.percent_decode(table) |> result.unwrap("")),
-            ..query_params
-          ])
-        ["port-feed"] ->
-          connect_server_component(req, ports_live.app, query_params)
-        // Static files
-        ["favicon.svg"] -> {
-          let assert Ok(priv) = erlang.priv_directory("spectator")
-          let path = priv <> "/lucy_spectator.svg"
-          mist.send_file(path, offset: 0, limit: option.None)
-          |> result.map(fn(favicon) {
-            response.new(200)
-            |> response.prepend_header("content-type", "image/svg+xml")
-            |> response.set_body(favicon)
-          })
-          |> result.lazy_unwrap(fn() {
-            response.new(404)
-            |> response.set_body(mist.Bytes(bytes_tree.new()))
-          })
-        }
-        // Redirect to dashboard by default
-        [] -> {
-          response.new(302)
-          |> response.prepend_header("location", "/dashboard")
-          |> response.set_body(empty_body)
-        }
 
-        _ -> not_found
+  fn(req: Request(Connection)) -> Response(ResponseData) {
+    let query_params = request.get_query(req) |> result.unwrap([])
+    case request.path_segments(req) {
+      // App Routes
+      ["dashboard"] ->
+        render_server_component("Dashboard", "dashboard-feed", query_params)
+      ["processes"] ->
+        render_server_component("Processes", "process-feed", query_params)
+      ["ets"] -> render_server_component("ETS", "ets-feed", query_params)
+      ["ets", table] ->
+        render_server_component("ETS", "ets-feed/" <> table, query_params)
+      ["ports"] -> render_server_component("Ports", "port-feed", query_params)
+      // WebSocket Routes
+      ["dashboard-feed"] ->
+        connect_server_component(req, dashboard_live.app, query_params)
+      ["process-feed"] ->
+        connect_server_component(req, processes_live.app, query_params)
+      ["ets-feed"] ->
+        connect_server_component(req, ets_overview_live.app, query_params)
+      ["ets-feed", table] ->
+        connect_server_component(req, ets_table_live.app, [
+          #("table_name", uri.percent_decode(table) |> result.unwrap("")),
+          ..query_params
+        ])
+      ["port-feed"] ->
+        connect_server_component(req, ports_live.app, query_params)
+      // Static files
+      ["favicon.svg"] -> {
+        let assert Ok(priv) = application.priv_directory("spectator")
+        let path = priv <> "/lucy_spectator.svg"
+        mist.send_file(path, offset: 0, limit: option.None)
+        |> result.map(fn(favicon) {
+          response.new(200)
+          |> response.prepend_header("content-type", "image/svg+xml")
+          |> response.set_body(favicon)
+        })
+        |> result.lazy_unwrap(fn() {
+          response.new(404)
+          |> response.set_body(mist.Bytes(bytes_tree.new()))
+        })
       }
-    }
-    |> mist.new
-    |> mist.after_start(fn(port, scheme, interface) {
-      let address = case interface {
-        mist.IpV6(..) -> "[" <> mist.ip_address_to_string(interface) <> "]"
-        _ -> mist.ip_address_to_string(interface)
+      // Redirect to dashboard by default
+      [] -> {
+        response.new(302)
+        |> response.prepend_header("location", "/dashboard")
+        |> response.set_body(empty_body)
       }
-      let message =
-        "🔍 Spectator is listening on "
-        <> http.scheme_to_string(scheme)
-        <> "://"
-        <> address
-        <> ":"
-        <> int.to_string(port)
-        <> " - Node: "
-        <> atom.to_string(node.self() |> node.to_atom())
-      io.println(message)
-    })
-    |> mist.port(port)
-    |> mist.start_http
 
-  // Extract PID for supervisor
-  case server_result {
-    Ok(server) -> {
-      let server_pid = process.subject_owner(server)
-      tag(server_pid, "__spectator_internal Server")
-      Ok(server_pid)
-    }
-    Error(_e) -> {
-      Error(Nil)
+      _ -> not_found
     }
   }
+  |> mist.new
+  |> mist.after_start(fn(port, scheme, interface) {
+    let address = case interface {
+      mist.IpV6(..) -> "[" <> mist.ip_address_to_string(interface) <> "]"
+      _ -> mist.ip_address_to_string(interface)
+    }
+    let message =
+      "🔍 Spectator is listening on "
+      <> http.scheme_to_string(scheme)
+      <> "://"
+      <> address
+      <> ":"
+      <> int.to_string(port)
+      <> " - Node: "
+      <> atom.to_string(node.self() |> node.name())
+    io.println(message)
+  })
+  |> mist.port(port)
+  |> mist.supervised()
 }
 
 /// Start the spectator application on port 3000
@@ -132,13 +121,23 @@ pub fn start() {
   start_on(3000)
 }
 
-pub fn start_on(port: Int) -> Result(process.Pid, dynamic.Dynamic) {
+pub fn start_on(
+  port: Int,
+) -> Result(actor.Started(sup.Supervisor), actor.StartError) {
   sup.new(sup.OneForOne)
-  |> sup.add(sup.worker_child("Spectator Tag Manager", api.start_tag_manager))
   |> sup.add(
-    sup.worker_child("Spectator Mist Server", fn() { start_server(port) }),
+    supervision.worker(fn() {
+      case api.start_tag_manager() {
+        Ok(pid) -> Ok(actor.Started(pid, Nil))
+        Error(error) ->
+          Error(actor.InitFailed(
+            "Failed to start tag manager: " <> string.inspect(error),
+          ))
+      }
+    }),
   )
-  |> sup.start_link()
+  |> sup.add(start_server(port))
+  |> sup.start()
 }
 
 /// Tag a process given by PID with a name for easier identification in the spectator UI.
@@ -154,7 +153,7 @@ pub fn tag_subject(
   subject sub: process.Subject(a),
   name name: String,
 ) -> process.Subject(a) {
-  let pid = process.subject_owner(sub)
+  let assert Ok(pid) = process.subject_owner(sub)
   tag(pid, name)
   sub
 }
@@ -186,18 +185,18 @@ fn validate_node_connection(
     // no other checks are needed
     Error(_) -> Ok("")
     Ok(node) -> {
-      let self = node.self() |> node.to_atom()
+      let self = node.self() |> node.name()
       use <- bool.guard(
-        self == atom.create_from_string("nonode@nohost"),
+        self == atom.create("nonode@nohost"),
         Error(NotDistributedError),
       )
 
-      let node_atom = atom.create_from_string(node)
+      let node_atom = atom.create(node)
       let cookie_validation_passed = case common.get_param(params, "cookie") {
         // No cookie, validation passes
         Error(_) -> True
         Ok(cookie) -> {
-          let cookie_atom = atom.create_from_string(cookie)
+          let cookie_atom = atom.create(cookie)
           result.unwrap(api.set_cookie(node_atom, cookie_atom), False)
         }
       }
@@ -309,6 +308,13 @@ fn render_server_component(
 
 //  SERVER COMPONENT WIRING ----------------------------------------------------
 
+type Socket(a) {
+  Socket(
+    component: lustre.Runtime(a),
+    self: process.Subject(server_component.ClientMessage(a)),
+  )
+}
+
 fn connect_server_component(
   req: Request(Connection),
   lustre_application,
@@ -317,63 +323,63 @@ fn connect_server_component(
   let socket_init = fn(_conn: WebsocketConnection) {
     let self = process.new_subject()
     let app = lustre_application()
-    let assert Ok(live_component) = lustre.start_actor(app, params)
-    tag_subject(live_component, "__spectator_internal Server Component")
-    process.send(
-      live_component,
-      server_component.subscribe(
-        // server components can have many connected clients, so we need a way to
-        // identify this client.
-        "ws",
-        process.send(self, _),
-      ),
+
+    let assert Ok(component) = lustre.start_server_component(app, params)
+
+    tag_subject(
+      server_component.subject(component),
+      "__spectator_internal Server Component",
     )
 
-    #(
-      // we store the server component's `Subject` as this socket's state so we
-      // can shut it down when the socket is closed.
-      live_component,
-      option.Some(process.selecting(process.new_selector(), self, fn(a) { a })),
-    )
+    server_component.register_subject(self)
+    |> lustre.send(to: component)
+
+    let selector = process.new_selector() |> process.select(self)
+    #(Socket(component:, self:), option.Some(selector))
   }
 
-  let socket_update = fn(live_component, conn: WebsocketConnection, msg) {
+  let socket_update = fn(state: Socket(a), msg, conn) {
     case msg {
       mist.Text(json) -> {
         // we attempt to decode the incoming text as an action to send to our
         // server component runtime.
-        let action = json.decode(json, server_component.decode_action)
+        let action =
+          json.parse(json, server_component.runtime_message_decoder())
 
         case action {
-          Ok(action) -> process.send(live_component, action)
+          Ok(action) -> lustre.send(state.component, action)
           Error(_) -> Nil
         }
 
-        actor.continue(live_component)
+        mist.continue(state)
       }
 
-      mist.Binary(_) -> actor.continue(live_component)
+      mist.Binary(_) -> mist.continue(state)
       mist.Custom(patch) -> {
         let assert Ok(_) =
           patch
-          |> server_component.encode_patch
+          |> server_component.client_message_to_json()
           |> json.to_string
           |> mist.send_text_frame(conn, _)
 
-        actor.continue(live_component)
+        mist.continue(state)
       }
-      mist.Closed | mist.Shutdown -> actor.Stop(process.Normal)
+      mist.Closed | mist.Shutdown -> mist.stop()
     }
   }
 
-  let socket_close = fn(live_component) {
-    process.send(live_component, lustre.shutdown())
+  let socket_close = fn(state: Socket(a)) {
+    server_component.deregister_subject(state.self)
+    |> lustre.send(to: state.component)
+
+    lustre.shutdown()
+    |> lustre.send(to: state.component)
   }
 
   mist.websocket(
     request: req,
     on_init: socket_init,
-    on_close: socket_close,
     handler: socket_update,
+    on_close: socket_close,
   )
 }

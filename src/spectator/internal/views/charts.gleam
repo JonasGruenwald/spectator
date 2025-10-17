@@ -34,7 +34,7 @@ fn map_segments_with_offset(
               attribute.title(
                 s.label <> " " <> common.format_percentage(s.value),
               ),
-              attribute.style([
+              attribute.styles([
                 #("x", float.to_string(offset) <> "px"),
                 #("y", "0px"),
                 #("height", column_chart_height <> "px"),
@@ -74,7 +74,7 @@ pub fn column_chart(segments: List(ChartSegment)) {
 pub fn legend_item(label: String, color: String, value: Element(a)) {
   html.div([attribute.class("legend-item")], [
     html.div([attribute.class("legend-colour")], [
-      html.div([attribute.style([#("background-color", color)])], []),
+      html.div([attribute.styles([#("background-color", color)])], []),
     ]),
     html.div([], [
       html.div([attribute.class("legend-label")], [html.text(label)]),
@@ -96,7 +96,7 @@ pub fn meter(value: Float) {
     ],
     [
       svg.rect([
-        attribute.style([
+        attribute.styles([
           #("x", "0px"),
           #("y", "0px"),
           #("height", meter_height <> "px"),

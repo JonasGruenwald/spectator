@@ -4,6 +4,7 @@
 
 import gleam/erlang/process.{type Subject}
 import gleam/otp/actor
+import gleam/result
 import gleam/set.{type Set}
 
 // Below this comment are the public functions that we want to expose to other modules.
@@ -25,7 +26,10 @@ const timeout: Int = 5000
 /// If the actor starts successfully, we get back an
 /// `Ok(subject)` which we can use to send messages to the actor.
 pub fn new() -> Result(Subject(Message), actor.StartError) {
-  actor.start(set.new(), handle_message)
+  actor.new(set.new())
+  |> actor.on_message(handle_message)
+  |> actor.start()
+  |> result.map(fn(started) { started.data })
 }
 
 /// Add an item to the pantry.
@@ -43,11 +47,11 @@ pub fn take_item(pantry: Subject(Message), item: String) -> Result(String, Nil) 
   //
   // Also, since we need to wait for a response, we pass a timeout as the last argument so we don't get stuck
   // waiting forever if our actor process gets struck by lightning or something.
-  actor.call(pantry, TakeItem(_, item), timeout)
+  actor.call(pantry, timeout, TakeItem(_, item))
 }
 
 pub fn list_items(pantry: Subject(Message)) -> Set(String) {
-  actor.call(pantry, ListItems(_), timeout)
+  actor.call(pantry, timeout, ListItems)
 }
 
 /// Close the pantry.
@@ -83,14 +87,14 @@ pub type Message {
 // In fact, take a look at [it's definition](https://hexdocs.pm/gleam_otp/gleam/otp/actor.html#Next) 
 // and you'll see what I mean.
 fn handle_message(
-  message: Message,
   pantry: Set(String),
-) -> actor.Next(Message, Set(String)) {
+  message: Message,
+) -> actor.Next(Set(String), Message) {
   // We pattern match on the message to decide what to do.
   case message {
     // This type of message will be in most actors, it's worth just sticking 
     // at the top.
-    Shutdown -> actor.Stop(process.Normal)
+    Shutdown -> actor.stop()
 
     // We're adding an item to the pantry. We don't need to reply to anyone, so we just
     // send the new state back to the actor to continue with.

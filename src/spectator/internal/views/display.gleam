@@ -1,9 +1,9 @@
 /// View functions for displaying all kinds of data from the system
 import gleam/dynamic
-import gleam/erlang
 import gleam/erlang/atom
 import gleam/erlang/port
 import gleam/erlang/process
+import gleam/erlang/reference
 import gleam/int
 import gleam/option.{type Option, None, Some}
 import gleam/string
@@ -177,7 +177,7 @@ pub fn atom(a: atom.Atom) {
   html.text(atom.to_string(a))
 }
 
-pub fn reference(ref: erlang.Reference) {
+pub fn reference(ref: reference.Reference) {
   html.text(string.inspect(ref))
 }
 
