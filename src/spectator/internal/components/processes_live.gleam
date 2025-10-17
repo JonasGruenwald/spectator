@@ -46,18 +46,14 @@ fn emit_message(msg: Msg) -> effect.Effect(Msg) {
 fn request_otp_details(
   node: api.ErlangNode,
   pid: process.Pid,
-  subject: Option(process.Subject(Msg)),
 ) -> effect.Effect(Msg) {
-  case subject {
-    Some(sub) -> {
-      use _ <- effect.from
-      api.request_otp_data(node, pid, fn(details) {
-        process.send(sub, ReceivedOtpDetails(details))
-      })
-      Nil
-    }
-    None -> effect.none()
-  }
+  use dispatch <- effect.from
+
+  api.request_otp_data(node, pid, fn(details) {
+    dispatch(ReceivedOtpDetails(details))
+  })
+
+  Nil
 }
 
 fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
@@ -147,7 +143,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         Some(p) if p.info.message_queue_len < common.message_queue_threshold -> #(
           new_model,
           effect.batch([
-            request_otp_details(model.node, p.pid, model.subject),
+            request_otp_details(model.node, p.pid),
             common.emit_after(
               model.refresh_interval,
               Refresh,
@@ -175,7 +171,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       let new_model =
         Model(..model, active_process: Some(p), state: None, status: None)
         |> do_refresh
-      #(new_model, request_otp_details(model.node, p.pid, model.subject))
+      #(new_model, request_otp_details(model.node, p.pid))
     }
     HeadingClicked(criteria) -> {
       case criteria {
@@ -212,17 +208,11 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       case target_sys_state {
         api.ProcessSuspended -> {
           let _ = api.resume(model.node, p.pid)
-          #(
-            do_refresh(model),
-            request_otp_details(model.node, p.pid, model.subject),
-          )
+          #(do_refresh(model), request_otp_details(model.node, p.pid))
         }
         api.ProcessRunning -> {
           let _ = api.suspend(model.node, p.pid)
-          #(
-            do_refresh(model),
-            request_otp_details(model.node, p.pid, model.subject),
-          )
+          #(do_refresh(model), request_otp_details(model.node, p.pid))
         }
       }
     }
@@ -233,7 +223,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
           let new_model =
             Model(..model, active_process: Some(p), state: None, status: None)
             |> do_refresh
-          #(new_model, request_otp_details(model.node, p.pid, model.subject))
+          #(new_model, request_otp_details(model.node, p.pid))
         }
         Error(_) -> #(model, effect.none())
       }
