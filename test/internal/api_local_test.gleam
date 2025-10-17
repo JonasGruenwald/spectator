@@ -1,11 +1,11 @@
 //// Test cases that run api requests against the local node
 
-import gleam/int
 import carpenter/table
 import gleam/dynamic
 import gleam/erlang/atom
 import gleam/erlang/port
 import gleam/erlang/process
+import gleam/int
 import gleam/list
 import gleam/option.{None, Some}
 import gleeunit/should
