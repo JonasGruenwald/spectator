@@ -12,12 +12,11 @@ import gleam/io
 import gleam/json
 import gleam/option
 import gleam/otp/actor
-import gleam/otp/static_supervisor as sup
+import gleam/otp/static_supervisor as supervisor
 import gleam/otp/supervision
 import gleam/result
 import gleam/string
 import gleam/uri
-import logging
 import lustre
 import lustre/attribute
 import lustre/element
@@ -40,7 +39,10 @@ pub fn main() {
   process.sleep_forever()
 }
 
-fn start_server(port: Int) -> supervision.ChildSpecification(sup.Supervisor) {
+fn mist_supervised(
+  host: String,
+  port: Int,
+) -> supervision.ChildSpecification(supervisor.Supervisor) {
   // Start mist server
   let empty_body = mist.Bytes(bytes_tree.new())
   let not_found = response.set_body(response.new(404), empty_body)
@@ -128,19 +130,21 @@ fn start_server(port: Int) -> supervision.ChildSpecification(sup.Supervisor) {
     io.println(message)
   })
   |> mist.port(port)
+  |> mist.bind(host)
   |> mist.supervised()
 }
 
 /// Start the spectator application on port 3000
 pub fn start() {
-  start_on(3000)
+  start_on("127.0.0.1", 3000)
 }
 
 pub fn start_on(
+  host: String,
   port: Int,
-) -> Result(actor.Started(sup.Supervisor), actor.StartError) {
-  sup.new(sup.OneForOne)
-  |> sup.add(
+) -> Result(actor.Started(supervisor.Supervisor), actor.StartError) {
+  supervisor.new(supervisor.OneForOne)
+  |> supervisor.add(
     supervision.worker(fn() {
       case api.start_tag_manager() {
         Ok(pid) -> Ok(actor.Started(pid, Nil))
@@ -151,8 +155,8 @@ pub fn start_on(
       }
     }),
   )
-  |> sup.add(start_server(port))
-  |> sup.start()
+  |> supervisor.add(mist_supervised(host, port))
+  |> supervisor.start()
 }
 
 /// Tag a process given by PID with a name for easier identification in the spectator UI.
