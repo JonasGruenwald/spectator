@@ -17,6 +17,7 @@ import gleam/otp/supervision
 import gleam/result
 import gleam/string
 import gleam/uri
+import logging
 import lustre
 import lustre/attribute
 import lustre/element
@@ -194,6 +195,7 @@ fn validate_node_connection(
   params: common.Params,
 ) -> Result(String, NodeConnectionError) {
   let node_res = common.get_param(params, "node")
+  echo "Validating node connection with params"
   case node_res {
     // No node passed, that's fine, we'll just use the local node
     // no other checks are needed
@@ -223,12 +225,18 @@ fn validate_node_connection(
         Error(FailedToSetCookieError),
       )
 
+      let hidden_connect_result =
+        api.hidden_connect_node(node_atom)
+        |> echo
+
+      logging.log(logging.Info, string.inspect(hidden_connect_result))
+
       use <- bool.guard(
-        !result.unwrap(api.hidden_connect_node(node_atom), False),
+        !result.unwrap(hidden_connect_result, False),
         Error(FailedToConnectError),
       )
 
-      Ok("🟢 " <> atom.to_string(node_atom))
+      Ok(atom.to_string(node_atom))
     }
   }
 }

@@ -46,7 +46,7 @@ const refreshIntervalSelect = dialogElement.querySelector("#refresh-interval");
 const urlParams = new URLSearchParams(window.location.search);
 const currentNode = urlParams.get("node") || "";
 const currentCookie = urlParams.get("cookie") || "";
-const currentInterval = urlParams.get("refresh_interval") || "";
+const currentInterval = urlParams.get("refresh") || "";
 nodeNameInput.value = currentNode;
 nodeCookieInput.value = currentCookie;
 refreshIntervalSelect.value = currentInterval;
@@ -57,13 +57,13 @@ submitButton.addEventListener("click", () => {
   const refreshInterval = refreshIntervalSelect.value;
 
   if (nodeNameInput.reportValidity()) {
-    const newParams = new URLSearchParams(window.location.search);
+    const newParams = new URLSearchParams();
     newParams.set("node", nodeName);
     if (nodeCookie) {
       newParams.set("cookie", nodeCookie);
     }
     if (refreshInterval !== "") {
-      newParams.set("refresh_interval", refreshInterval);
+      newParams.set("refresh", refreshInterval);
     }
     window.location.search = newParams.toString();
   }
