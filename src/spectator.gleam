@@ -85,6 +85,20 @@ fn start_server(port: Int) -> supervision.ChildSpecification(sup.Supervisor) {
           |> response.set_body(mist.Bytes(bytes_tree.new()))
         })
       }
+      ["connect-widget.js"] -> {
+        let assert Ok(priv) = application.priv_directory("spectator")
+        let path = priv <> "/connect-widget.js"
+        mist.send_file(path, offset: 0, limit: option.None)
+        |> result.map(fn(script) {
+          response.new(200)
+          |> response.prepend_header("content-type", "application/javascript")
+          |> response.set_body(script)
+        })
+        |> result.lazy_unwrap(fn() {
+          response.new(404)
+          |> response.set_body(mist.Bytes(bytes_tree.new()))
+        })
+      }
       // Redirect to dashboard by default
       [] -> {
         response.new(302)
@@ -183,7 +197,10 @@ fn validate_node_connection(
   case node_res {
     // No node passed, that's fine, we'll just use the local node
     // no other checks are needed
-    Error(_) -> Ok("")
+    Error(_) -> {
+      let self = node.self() |> node.name() |> atom.to_string()
+      Ok(self)
+    }
     Ok(node) -> {
       let self = node.self() |> node.name()
       use <- bool.guard(
@@ -216,6 +233,10 @@ fn validate_node_connection(
   }
 }
 
+fn connect_widget_script() {
+  html.script([attribute.src("/connect-widget.js")], "")
+}
+
 fn render_server_component(
   title: String,
   server_component_path path: String,
@@ -244,6 +265,7 @@ fn render_server_component(
             common.sanitize_params(params)
               |> common.encode_params(),
           ),
+          connect_widget_script(),
           element.element(
             "lustre-server-component",
             [
@@ -259,7 +281,7 @@ fn render_server_component(
     Error(connection_error) -> {
       html([], [
         html.head([], [
-          html.title([], title),
+          html.title([], title <> " - Connection Failed"),
           html.meta([attribute.attribute("charset", "utf-8")]),
           html.link([
             attribute.rel("icon"),
@@ -288,11 +310,12 @@ fn render_server_component(
               }),
             ]),
             html.div([], [
-              html.a([attribute.href("/"), attribute.class("button")], [
-                html.text("Return to local node"),
+              html.button([attribute.class("change-target-button")], [
+                html.text("Change Inspection Target"),
               ]),
             ]),
           ]),
+          connect_widget_script(),
         ]),
       ])
     }

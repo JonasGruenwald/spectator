@@ -81,6 +81,7 @@ button,
   color: var(--text);
   padding: 1px 4px;
   text-decoration: none;
+  cursor: pointer;
 }
 
 button:hover,
@@ -186,6 +187,11 @@ button:hover,
   align-items: center;
   justify-content: center;
   padding: 20px;
+  gap: 10px;
+}
+
+.change-target-button{
+  display: none;
 }
 
 /* Table View */
@@ -494,4 +500,22 @@ table.ets-data tbody tr:hover {
 
 .legend-colour>div {
   flex-grow: 1;
+}
+
+.connect-widget-dialog{
+  border: 1px solid var(--text);
+}
+
+.connect-widget-content h2{
+  margin-top: 0;
+}
+
+.connect-widget-form{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.connect-widget-actions{
+  margin-top: 15px;
 }
