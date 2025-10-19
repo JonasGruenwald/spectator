@@ -76,5 +76,5 @@ jobs:
             See [CHANGELOG.md](CHANGELOG.md) for details.
           files: |
             spectator_app/spectator_app
-          draft: true
+          draft: false
           prerelease: false
