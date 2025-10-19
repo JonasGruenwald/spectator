@@ -1,5 +1,6 @@
 # Note: be careful with publishing ports via docker, as this will
 # expose the ports to the whole network unless bound to localhost.
+
 services:
   app:
     build:

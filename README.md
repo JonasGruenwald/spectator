@@ -68,6 +68,8 @@ You can use spectator to inspect the BEAM node running your deployed application
 
 The standalone spectator application is available as a docker image via `ghcr.io/jonasgruenwald/spectator`, and as an escript via the [releases page](https://github.com/JonasGruenwald/spectator/releases).
 
+The repo contains [a full example of how to use spectator to inspect an app deployed via docker](https://github.com/JonasGruenwald/spectator/tree/main/example#readme).
+
 First, ensure your application has an Erlang name and cookie set, for example by setting the `ERL_FLAGS` environment variable before your application is started:
 
 ```sh
