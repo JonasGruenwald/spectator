@@ -2,7 +2,7 @@ name = "spectator"
 version = "2.0.0"
 description = "BEAM observer tool"
 licences = ["MIT"]
-repository = { type = "github", user = "JonasGruenwald", repo = "spectator" }
+repository = { type = "github", user = "JonasGruenwald", repo = "spectator", path = "spectator" }
 
 [documentation]
 pages = [
