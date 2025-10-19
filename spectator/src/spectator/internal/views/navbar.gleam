@@ -146,7 +146,9 @@ pub fn render(current_tab: String, connection_status, query_string: String) {
     html.div([attribute.class("filler")], []),
     html.div([attribute.class("connection-status")], [
       html.text(connection_status),
-      html.button([attribute.class("change-target-button")], [html.text("Change Target")]),
+      html.button([attribute.class("change-target-button")], [
+        html.text("Change Target"),
+      ]),
     ]),
   ])
 }
