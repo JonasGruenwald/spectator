@@ -23,5 +23,6 @@ RUN \
 COPY --from=build /usr/src/app/build/erlang-shipment /app
 COPY ./spectator_app/healthcheck.sh /app/healthcheck.sh
 WORKDIR /app
+ENV ERL_FLAGS="-sname spectator_app"
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["run"]

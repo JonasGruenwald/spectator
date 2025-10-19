@@ -21,4 +21,4 @@ run = [
 run = 'docker build . -t spectator'
 
 [tasks."run:docker"]
-run = 'docker run --rm -p 3000:3000 spectator'
+run = 'docker run --rm --hostname spectator -p 3000:3000 spectator'
