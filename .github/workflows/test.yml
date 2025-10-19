@@ -10,6 +10,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./spectator
     steps:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
