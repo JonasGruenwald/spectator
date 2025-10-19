@@ -70,6 +70,8 @@ pub fn main() {
 
 You can use spectator to inspect the BEAM node running your deployed application by running spectator as a standalone app, and connecting it to the erlang node your application is running on via distribution.
 
+The standalone spectator application is available as a docker image via `ghcr.io/jonasgruenwald/spectator`
+
 First, ensure your application has an Erlang name and cookie set, for example by setting the `ERL_FLAGS` environment variable before your Gleam application is started:
 
 ```sh
@@ -80,7 +82,11 @@ If your application is running in a docker container, put both your applications
 
 Start spectator, and click 'Change Target' in the top right corner of the application.
 
-Enter the details of the node you wish to inspect and click 'Connect'. The name should be the name you set via `-sname`, followed by `@`, and then the hostname.
+Enter the details of the node you wish to inspect, the name should be the name you set via `-sname`, followed by `@`, and then the hostname.
+
+Finally, click 'Connect', to inspect the your application node.
+
+Please note that all connection information, including the cookie, is stored plainly in the URL query parameters of the spectator application.
 
 ## Considerations
 
