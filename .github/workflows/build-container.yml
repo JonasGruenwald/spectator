@@ -21,7 +21,7 @@ jobs:
 
       - name: Push image
         run: |
-          IMAGE_ID=ghcr.io/JonasGruenwald/spectator
+          IMAGE_ID=ghcr.io/jonasgruenwald/spectator
           TAG="$IMAGE_ID":$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
           docker tag spectator_app "$TAG"
           docker push "$TAG"
