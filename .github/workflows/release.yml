@@ -27,7 +27,7 @@ jobs:
       - name: Upload escript artifact
         uses: actions/upload-artifact@v4
         with:
-          name: spectator_app
+          name: spectator_escript
           path: spectator_app/spectator_app
 
   push-docker:
@@ -62,7 +62,7 @@ jobs:
       - name: Download escript artifact
         uses: actions/download-artifact@v4
         with:
-          name: spectator_app
+          name: spectator_escript
       
       - name: Extract version from tag
         id: version
