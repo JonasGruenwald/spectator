@@ -63,6 +63,9 @@ jobs:
           docker buildx imagetools create -t "$IMAGE_ID:$VERSION" \
             "$IMAGE_ID:$VERSION-amd64" \
             "$IMAGE_ID:$VERSION-arm64"
+          docker buildx imagetools create -t "$IMAGE_ID:latest" \
+            "$IMAGE_ID:$VERSION-amd64" \
+            "$IMAGE_ID:$VERSION-arm64"
 
   create-release:
     runs-on: ubuntu-latest
