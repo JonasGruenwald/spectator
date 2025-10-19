@@ -9,7 +9,7 @@ Spectator is a BEAM observer tool written in Gleam, that plays well with gleam_o
 
 ## Features
 
-This is a work in progress, so far it has the following features:
+So far, spectator has the following features:
 
 - Show processes in a sortable table
 - Tag individual processes for easy identification
@@ -27,8 +27,6 @@ This is a work in progress, so far it has the following features:
 
 You can install spectator as a dependency in your project, and run it as part of your application to inspect your app in development.
 
-Install as a dependency
-
 ```sh
 gleam add spectator
 ```
@@ -36,8 +34,6 @@ gleam add spectator
 Call `spectator.start()` in your application, to start the spectator service and WebUI.
 
 In order to make it easier to identify your Gleam processes in the process list, you can tag them with a friendly name with `spectator.tag`, `spectator.tag_subject` or `spectator.tag_result` **after** starting the spectator service.
-
-## Example
 
 ```gleam
 import gleam/erlang/process
@@ -72,7 +68,7 @@ You can use spectator to inspect the BEAM node running your deployed application
 
 The standalone spectator application is available as a docker image via `ghcr.io/jonasgruenwald/spectator`, and as an escript via the [releases page](https://github.com/JonasGruenwald/spectator/releases).
 
-First, ensure your application has an Erlang name and cookie set, for example by setting the `ERL_FLAGS` environment variable before your Gleam application is started:
+First, ensure your application has an Erlang name and cookie set, for example by setting the `ERL_FLAGS` environment variable before your application is started:
 
 ```sh
 ERL_FLAGS="-sname myapp -setcookie mycookie"
