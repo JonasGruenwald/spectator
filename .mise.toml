@@ -13,12 +13,13 @@ run = 'gleam test'
 
 [tasks."build:escript"]
 dir = "spectator_app"
-run = [
-  'gleam build',
-  'gleam run -m gleescript'
-]
+run = ['gleam build', 'gleam run -m gleescript']
 [tasks."build:docker"]
 run = 'docker build . -t spectator'
 
 [tasks."run:docker"]
 run = 'docker run --rm --hostname spectator -p 3000:3000 spectator'
+
+[tasks.publish]
+dir = "spectator"
+run = ['gleam publish']
