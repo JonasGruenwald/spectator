@@ -10,17 +10,14 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./spectator
     steps:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: "28"
+          otp-version: "27.1.2"
           gleam-version: "1.12.0"
           rebar3-version: "3"
-          # elixir-version: "1.15.4"
+          # elixir-version: "1"
       - run: gleam deps download
       - run: gleam test
       - run: gleam format --check src test

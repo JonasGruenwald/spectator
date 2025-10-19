@@ -8,7 +8,6 @@ import lustre/attribute
 import lustre/effect
 import lustre/element.{type Element}
 import lustre/element/html
-import lustre/event
 import spectator/internal/api
 import spectator/internal/common
 import spectator/internal/views/charts.{ChartSegment}
@@ -195,35 +194,6 @@ fn view(model: Model) -> Element(Msg) {
         split_section(
           [
             // Left
-            html.h1([], [html.text("Inspect BEAM Nodes")]),
-            html.div([attribute.class("info-container")], [
-              // info_item("Currently Inspecting", case model.node {
-              //   Some(n) -> atom.to_string(n)
-              //   None -> "Self (The node running spectator)"
-              // }),
-              info_field(
-                "Node",
-                case model.node_input {
-                  "" -> "Enter node name..."
-                  n -> n
-                },
-                NodeInputChanged,
-              ),
-              info_field(
-                "Cookie",
-                case model.cookie_input {
-                  "" -> "Enter cookie or leave empty"
-                  n -> n
-                },
-                CookieInputChanged,
-              ),
-              info_field(
-                "Refresh Interval (ms)",
-                model.refresh_input,
-                RefreshInputChanged,
-              ),
-              target_actions(model),
-            ]),
             html.h1([], [html.text("System Information")]),
             html.div([attribute.class("info-container")], [
               info_item("Uptime", system_info.uptime),
@@ -301,39 +271,6 @@ fn info_item(label, value) {
   html.div([attribute.class("info-item")], [
     html.div([attribute.class("info-label")], [html.text(label)]),
     html.div([attribute.class("info-value")], [html.text(value)]),
-  ])
-}
-
-fn info_field(label, default_value, handler) {
-  html.div([attribute.class("info-item")], [
-    html.label([attribute.class("info-label")], [html.text(label)]),
-    html.input([
-      event.on_input(handler),
-      attribute.class("info-value"),
-      attribute.placeholder(default_value),
-    ]),
-  ])
-}
-
-fn target_actions(model: Model) {
-  html.div([attribute.class("info-item")], [
-    html.a([attribute.class("button"), attribute.href("/dashboard")], [
-      html.text("Reset to Self"),
-    ]),
-    html.a(
-      [
-        attribute.class("button"),
-        attribute.href(
-          "/dashboard"
-          <> []
-          |> common.add_param("node", model.node_input)
-          |> common.add_param("cookie", model.cookie_input)
-          |> common.add_param("refresh", model.refresh_input)
-          |> common.encode_params(),
-        ),
-      ],
-      [html.text("Inspect Target")],
-    ),
   ])
 }
 

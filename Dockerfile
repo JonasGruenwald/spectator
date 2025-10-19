@@ -1,0 +1,28 @@
+ARG ERLANG_VERSION=28.0.2.0
+ARG GLEAM_VERSION=v1.12.0
+
+# Gleam stage
+FROM ghcr.io/gleam-lang/gleam:${GLEAM_VERSION}-scratch AS gleam
+
+# Build stage
+FROM erlang:${ERLANG_VERSION}-alpine AS build
+COPY --from=gleam /bin/gleam /bin/gleam
+COPY ./spectator_app /usr/src/app/
+COPY ./spectator /usr/src/spectator/
+RUN cd /usr/src/app && gleam export erlang-shipment
+
+# Final stage
+FROM erlang:${ERLANG_VERSION}-alpine
+ARG GIT_SHA
+ARG BUILD_TIME
+ENV GIT_SHA=${GIT_SHA}
+ENV BUILD_TIME=${BUILD_TIME}
+RUN \
+  addgroup --system webapp && \
+  adduser --system webapp -g webapp
+COPY --from=build /usr/src/app/build/erlang-shipment /app
+COPY ./spectator_app/healthcheck.sh /app/healthcheck.sh
+WORKDIR /app
+ENV ERL_FLAGS="-sname spectator_app"
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["run"]

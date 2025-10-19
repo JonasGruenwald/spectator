@@ -1,0 +1,80 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  push-docker:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build . --file Dockerfile --tag spectator_app
+
+      - name: Log in to registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Push image
+        run: |
+          IMAGE_ID=ghcr.io/jonasgruenwald/spectator
+          TAG="$IMAGE_ID":$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          docker tag spectator_app "$TAG"
+          docker push "$TAG"
+
+  create-release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./spectator_app
+    needs: [push-docker]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "28"
+          gleam-version: "1.12.0"
+          rebar3-version: "3"
+
+      - run: gleam deps download
+      - run: gleam build
+      - run: gleam run -m gleescript
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## Docker Image
+
+            Pull the container image for this release:
+            ```bash
+            docker pull ghcr.io/jonasgruenwald/spectator:${{ steps.version.outputs.VERSION }}
+            ```
+
+            ## Escript
+
+            Download the `spectator_app` escript from the assets below and run:
+            ```bash
+            chmod +x spectator_app
+            ./spectator_app
+            ```
+
+            ## Changes
+            See [CHANGELOG.md](CHANGELOG.md) for details.
+          files: |
+            spectator_app/spectator_app
+          draft: false
+          prerelease: false
