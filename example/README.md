@@ -24,7 +24,7 @@ services:
       - "127.0.0.1:1234:1234"
 
   spectator:
-    image: ghcr.io/jonasgruenwald/spectator:v2.0.0-test
+    image: ghcr.io/jonasgruenwald/spectator
     ports:
       - "127.0.0.1:3000:3000"
 ```
