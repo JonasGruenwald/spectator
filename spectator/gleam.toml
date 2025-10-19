@@ -6,7 +6,7 @@ repository = { type = "github", user = "JonasGruenwald", repo = "spectator" }
 
 [documentation]
 pages = [
-  { title = "Changelog", path = "changelog.html", source = "./CHANGELOG.md" },
+  { title = "Changelog", path = "changelog.html", source = "../CHANGELOG.md" },
 ]
 
 
