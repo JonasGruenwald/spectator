@@ -14,4 +14,4 @@
 # You may choose to add additional health check logic to this script.
 #
 
-exec wget --spider --quiet 'http://127.0.0.1:8000'
+exec wget --spider --quiet 'http://127.0.0.1:3000'
