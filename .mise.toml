@@ -3,8 +3,8 @@ erlang = "28"
 gleam = "1.12.0"
 
 [tasks."build:assets"]
-dir = "assets"
-run = "gleam run -m embeds/files"
+dir = "spectator"
+run = "gleam run -m embeds/files spectator/internal/assets:src/spectator/internal/assets"
 
 [tasks.dev]
 dir = "spectator"

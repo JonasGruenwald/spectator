@@ -1,4 +1,3 @@
-import assets
 import gleam/bool
 import gleam/bytes_tree
 import gleam/erlang/atom
@@ -24,6 +23,7 @@ import lustre/element/html.{html}
 import lustre/server_component
 import mist.{type Connection, type ResponseData, type WebsocketConnection}
 import spectator/internal/api
+import spectator/internal/assets
 import spectator/internal/common
 import spectator/internal/components/dashboard_live
 import spectator/internal/components/ets_overview_live
