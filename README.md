@@ -1,4 +1,4 @@
-## <img width=16 src="https://raw.githubusercontent.com/JonasGruenwald/spectator/main/spectator/priv/lucy_spectator.svg"> Spectator
+## <img width=16 src="https://raw.githubusercontent.com/JonasGruenwald/spectator/src/spectator/internal/assets/lucy_spectator.svg"> Spectator
 
 [![Package Version](https://img.shields.io/hexpm/v/spectator)](https://hex.pm/packages/spectator)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/spectator/)
