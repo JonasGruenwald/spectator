@@ -1,4 +1,3 @@
-import gleam/erlang/application
 import gleam/erlang/process
 import gleam/int
 import gleam/list
@@ -7,7 +6,6 @@ import gleam/order
 import gleam/uri
 import lustre/effect
 import lustre/server_component
-import simplifile
 
 pub const message_queue_threshold = 10
 
@@ -79,12 +77,6 @@ pub fn truncate_float(value: Float) -> String
 
 pub fn format_percentage(value: Float) -> String {
   truncate_float(value) <> "%"
-}
-
-pub fn static_file(name: String) {
-  let assert Ok(priv) = application.priv_directory("spectator")
-  let assert Ok(data) = simplifile.read(priv <> "/" <> name)
-  data
 }
 
 pub fn emit_after(

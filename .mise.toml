@@ -2,6 +2,10 @@
 erlang = "28"
 gleam = "1.12.0"
 
+[tasks."build:assets"]
+dir = "assets"
+run = "gleam run -m embeds/files"
+
 [tasks.dev]
 dir = "spectator"
 env = { ERL_FLAGS = "-sname spectator" }

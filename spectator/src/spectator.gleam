@@ -1,6 +1,6 @@
+import assets
 import gleam/bool
 import gleam/bytes_tree
-import gleam/erlang/application
 import gleam/erlang/atom
 import gleam/erlang/node
 import gleam/erlang/process
@@ -75,32 +75,10 @@ fn mist_supervised(
         connect_server_component(req, ports_live.app, query_params)
       // Static files
       ["favicon.svg"] -> {
-        let assert Ok(priv) = application.priv_directory("spectator")
-        let path = priv <> "/lucy_spectator.svg"
-        mist.send_file(path, offset: 0, limit: option.None)
-        |> result.map(fn(favicon) {
-          response.new(200)
-          |> response.prepend_header("content-type", "image/svg+xml")
-          |> response.set_body(favicon)
-        })
-        |> result.lazy_unwrap(fn() {
-          response.new(404)
-          |> response.set_body(mist.Bytes(bytes_tree.new()))
-        })
+        serve_string(assets.lucy_spectator)
       }
       ["connect-widget.js"] -> {
-        let assert Ok(priv) = application.priv_directory("spectator")
-        let path = priv <> "/connect-widget.js"
-        mist.send_file(path, offset: 0, limit: option.None)
-        |> result.map(fn(script) {
-          response.new(200)
-          |> response.prepend_header("content-type", "application/javascript")
-          |> response.set_body(script)
-        })
-        |> result.lazy_unwrap(fn() {
-          response.new(404)
-          |> response.set_body(mist.Bytes(bytes_tree.new()))
-        })
+        serve_string(assets.connect_widget)
       }
       // Redirect to dashboard by default
       [] -> {
@@ -238,6 +216,11 @@ fn validate_node_connection(
   }
 }
 
+fn serve_string(content: String) -> Response(ResponseData) {
+  response.new(200)
+  |> response.set_body(mist.Bytes(bytes_tree.from_string(content)))
+}
+
 fn connect_widget_script() {
   html.script([attribute.src("/connect-widget.js")], "")
 }
@@ -248,7 +231,7 @@ fn render_server_component(
   params params: common.Params,
 ) {
   let res = response.new(200)
-  let styles = common.static_file("styles.css")
+  let styles = assets.styles
   let html = case validate_node_connection(params) {
     Ok(connection_name) -> {
       html([], [

@@ -1,5 +1,5 @@
 name = "spectator"
-version = "2.0.0"
+version = "2.0.1"
 description = "BEAM observer tool"
 licences = ["MIT"]
 repository = { type = "github", user = "JonasGruenwald", repo = "spectator", path = "spectator" }
@@ -9,7 +9,6 @@ pages = [
   { title = "Changelog", path = "changelog.html", source = "../CHANGELOG.md" },
   { title = "About Spectator", path = "overview.html", source = "../README.md" },
 ]
-
 
 [dependencies]
 simplifile = ">= 2.2.0 and < 3.0.0"
@@ -22,6 +21,7 @@ gleam_otp = ">= 1.0.0 and < 2.0.0"
 mist = ">= 5.0.0 and < 6.0.0"
 gleam_stdlib = ">= 0.65.0 and < 1.0.0"
 lustre = ">= 5.0.0 and < 6.0.0"
+assets = { path = "../assets" }
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"

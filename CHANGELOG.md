@@ -1,3 +1,7 @@
+## [2.0.1] 2025-10-22
+
+- Embed assets into package instead of relying on priv directory, as it's not available to the escript
+
 ## [2.0.0] 2025-10-19
 
 - Interface: Moved the UI to change inspection target to a modal dialog that can be triggered from all pages, and is not rendered through a server component, requiring no active connection
