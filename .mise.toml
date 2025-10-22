@@ -4,7 +4,10 @@ gleam = "1.12.0"
 
 [tasks."build:assets"]
 dir = "spectator"
-run = "gleam run -m embeds/files spectator/internal/assets:src/spectator/internal/assets"
+run = [
+  "gleam run -m embeds/files spectator/internal/assets:src/spectator/internal/assets",
+  "gleam format",
+]
 
 [tasks.dev]
 dir = "spectator"
