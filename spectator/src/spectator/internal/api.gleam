@@ -526,15 +526,8 @@ pub fn sort_port_list(
 // -------[PROCESS LIST]
 
 pub fn get_process_list(n: ErlangNode) -> List(ProcessItem) {
-  case list_processes(n) {
-    Ok(pids) -> {
-      list.filter_map(pids, fn(pid) {
-        case get_process_info(n, pid) {
-          Error(e) -> Error(e)
-          Ok(info) -> Ok(ProcessItem(pid, info))
-        }
-      })
-    }
+  case list_processes_with_info(n) {
+    Ok(items) -> items
     Error(e) -> {
       log(
         logging.Alert,
@@ -549,6 +542,11 @@ pub fn get_process_list(n: ErlangNode) -> List(ProcessItem) {
 pub fn list_processes(
   node: ErlangNode,
 ) -> Result(List(process.Pid), ErlangError)
+
+@external(erlang, "spectator_ffi", "list_processes_with_info")
+fn list_processes_with_info(
+  node: ErlangNode,
+) -> Result(List(ProcessItem), ErlangError)
 
 @external(erlang, "spectator_ffi", "get_process_info")
 pub fn get_process_info(
@@ -634,7 +632,7 @@ fn process_raw_ets_data(
   }
 }
 
-@external(erlang, "spectator_ffi", "list_ets_tables")
+@external(erlang, "spectator_ffi", "list_ets_tables_bulk")
 pub fn list_ets_tables(node: ErlangNode) -> Result(List(Table), ErlangError)
 
 @external(erlang, "spectator_ffi", "get_ets_table_info")
@@ -655,18 +653,20 @@ pub fn opaque_tuple_to_list(tuple: OpaqueTuple) -> List(dynamic.Dynamic)
 // -------[PORTS]
 
 pub fn get_port_list(node: ErlangNode) -> List(PortItem) {
-  list_ports(node)
-  |> result.unwrap([])
-  |> list.filter_map(fn(pid) {
-    case get_port_info(node, pid) {
-      Error(e) -> Error(e)
-      Ok(info) -> Ok(PortItem(pid, info))
+  case list_ports_with_info(node) {
+    Ok(items) -> items
+    Error(e) -> {
+      log(logging.Alert, "Failed to list ports, error: " <> string.inspect(e))
+      []
     }
-  })
+  }
 }
 
 @external(erlang, "spectator_ffi", "list_ports")
 pub fn list_ports(node: ErlangNode) -> Result(List(port.Port), ErlangError)
+
+@external(erlang, "spectator_ffi", "list_ports_with_info")
+fn list_ports_with_info(node: ErlangNode) -> Result(List(PortItem), ErlangError)
 
 @external(erlang, "spectator_ffi", "get_port_info")
 pub fn get_port_info(

@@ -192,7 +192,8 @@ fn render_table_data(model: Model, table: api.Table, data: api.TableData) {
         html.thead([], [
           html.tr(
             [],
-            list.range(0, data.max_length - 1)
+            int.range(0, data.max_length, [], fn(acc, i) { [i, ..acc] })
+              |> list.reverse
               |> list.map(fn(i) {
                 table.heading(
                   int.to_string(i),

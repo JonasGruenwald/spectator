@@ -58,19 +58,20 @@ fn request_otp_details(
 
 fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
   let node = api.node_from_params(params)
-  let info = api.get_process_list(node)
   let default_sort_criteria = api.SortByReductions
   let default_sort_direction = api.Descending
   let refresh_interval = common.get_refresh_interval(params)
-  let sorted =
-    api.sort_process_list(info, default_sort_criteria, api.Descending)
+  // Return immediately with empty list - data is loaded asynchronously
+  // via the Refresh effect. This avoids blocking the init with slow
+  // erpc calls to remote nodes that would exceed mist's 500ms actor
+  // init timeout.
   #(
     Model(
       node:,
       params: common.sanitize_params(params),
       subject: option.None,
       refresh_interval:,
-      process_list: sorted,
+      process_list: [],
       sort_criteria: default_sort_criteria,
       sort_direction: default_sort_direction,
       active_process: option.None,
@@ -79,7 +80,7 @@ fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
       state: option.None,
     ),
     effect.batch([
-      common.emit_after(refresh_interval, Refresh, option.None, CreatedSubject),
+      emit_message(Refresh),
       case common.get_param(params, "selected") {
         Error(_) -> effect.none()
         Ok(potential_pid) -> {

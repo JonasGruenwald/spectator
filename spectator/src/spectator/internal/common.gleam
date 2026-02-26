@@ -54,7 +54,6 @@ pub fn sanitize_params(params: Params) -> Params {
   list.filter_map(params, fn(p) {
     case p {
       #("node", _) -> Ok(p)
-      #("cookie", _) -> Ok(p)
       #("refresh", _) -> Ok(p)
       _ -> Error(Nil)
     }
