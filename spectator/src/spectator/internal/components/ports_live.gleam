@@ -37,46 +37,25 @@ pub type Model {
 
 fn init(params: common.Params) -> #(Model, effect.Effect(Msg)) {
   let node = api.node_from_params(params)
-  let info = api.get_port_list(node)
   let refresh_interval = common.get_refresh_interval(params)
   let default_sort_criteria = api.SortByPortInput
   let default_sort_direction = api.Descending
-  let sorted = api.sort_port_list(info, default_sort_criteria, api.Descending)
-  let active_port = case common.get_param(params, "selected") {
-    Error(_) -> None
-    Ok(raw_port_id) -> {
-      use port_id <- option.then(
-        api.decode_port(raw_port_id) |> option.from_result,
-      )
-      use info <- option.then(
-        api.get_port_info(node, port_id)
-        |> option.from_result,
-      )
-      Some(api.PortItem(port_id:, info:))
-    }
-  }
-  let details = case active_port {
-    None -> None
-    Some(ap) -> {
-      case api.get_port_details(node, ap.port_id) {
-        Ok(details) -> Some(details)
-        Error(_) -> None
-      }
-    }
-  }
+  // Return immediately with empty port_list - data loaded async via Refresh
+  // to avoid blocking init with slow erpc calls that exceed mist's 500ms
+  // actor init timeout.
   #(
     Model(
       node:,
       params: common.sanitize_params(params),
       subject: option.None,
       refresh_interval: refresh_interval,
-      port_list: sorted,
+      port_list: [],
       sort_criteria: default_sort_criteria,
       sort_direction: default_sort_direction,
-      active_port:,
-      details:,
+      active_port: None,
+      details: None,
     ),
-    common.emit_after(refresh_interval, Refresh, option.None, CreatedSubject),
+    effect.from(fn(dispatch) { dispatch(Refresh) }),
   )
 }
 

@@ -1,5 +1,3 @@
-console.log("Connect widget loaded!");
-
 const dialogHtml = `
     <dialog class="connect-widget-dialog">
       <div class="connect-widget-content">
@@ -7,8 +5,6 @@ const dialogHtml = `
          <div class="connect-widget-form">
           <label for="node-name">Node Name</label>
           <input required="true" type="text" id="node-name" name="node-address" placeholder="wibble@127.0.0.1" />
-          <label for="node-cookie">Cookie</label>
-          <input type="text" id="node-cookie" name="node-cookie" placeholder="wobble" />
           <label for="refresh-interval">Refresh Interval</label>
           <select id="refresh-interval" name="refresh-interval">
             <option value="">Default</option>
@@ -39,29 +35,22 @@ const cancelButton = dialogElement.querySelector("#connect-cancel");
 const resetButton = dialogElement.querySelector("#connect-resetl");
 const submitButton = dialogElement.querySelector("#connect-submit");
 const nodeNameInput = dialogElement.querySelector("#node-name");
-const nodeCookieInput = dialogElement.querySelector("#node-cookie");
 const refreshIntervalSelect = dialogElement.querySelector("#refresh-interval");
 
 // Prefill with current params
 const urlParams = new URLSearchParams(window.location.search);
 const currentNode = urlParams.get("node") || "";
-const currentCookie = urlParams.get("cookie") || "";
 const currentInterval = urlParams.get("refresh") || "";
 nodeNameInput.value = currentNode;
-nodeCookieInput.value = currentCookie;
 refreshIntervalSelect.value = currentInterval;
 
 submitButton.addEventListener("click", () => {
   const nodeName = nodeNameInput.value;
-  const nodeCookie = nodeCookieInput.value;
   const refreshInterval = refreshIntervalSelect.value;
 
   if (nodeNameInput.reportValidity()) {
     const newParams = new URLSearchParams();
     newParams.set("node", nodeName);
-    if (nodeCookie) {
-      newParams.set("cookie", nodeCookie);
-    }
     if (refreshInterval !== "") {
       newParams.set("refresh", refreshInterval);
     }

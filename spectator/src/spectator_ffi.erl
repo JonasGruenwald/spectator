@@ -27,8 +27,8 @@
     get_system_info/1,
     truncate_float/1,
     kill_process/2,
-    set_cookie/2,
-    hidden_connect_node/1
+    hidden_connect_node/1,
+    is_otp_compatible/2
 ]).
 
 % ---------------------------------------------------
@@ -36,6 +36,7 @@
 % ---------------------------------------------------
 
 -define(ERPC_TIMEOUT, 1000).
+-define(BULK_TIMEOUT, 5000).
 
 % Make a function to the local or remote node.
 % NodeOption is a Gleam option, if passed as Some(node), the call is made via erpc to that node,
@@ -124,11 +125,55 @@ to_option(Input) ->
 % PROCESSES
 % ---------------------------------------------------
 
-% List all processes on a node
+% List all processes with info in a single batch.
+% For remote nodes, uses concurrent erpc:send_request to collect all
+% process info in parallel, reducing N sequential round-trips to 1 batch.
 list_processes(NodeOption) ->
+    Items = [current_function, initial_call, registered_name,
+             memory, message_queue_len, reductions, status],
     to_result(fun() ->
-        do_call(NodeOption, erlang, processes, [])
+        case NodeOption of
+            none ->
+                lists:filtermap(fun(Pid) ->
+                    case erlang:process_info(Pid, Items) of
+                        undefined -> false;
+                        [] -> false;
+                        Info -> {true, build_process_item(Pid, Info)}
+                    end
+                end, erlang:processes());
+            {some, NodeName} ->
+                Pids = erpc:call(NodeName, erlang, processes, [], ?BULK_TIMEOUT),
+                Reqs = [{P, erpc:send_request(NodeName, erlang, process_info, [P, Items])}
+                        || P <- Pids],
+                lists:filtermap(fun({Pid, Req}) ->
+                    try
+                        case erpc:receive_response(Req, ?BULK_TIMEOUT) of
+                            undefined -> false;
+                            [] -> false;
+                            Info -> {true, build_process_item(Pid, Info)}
+                        end
+                    catch _:_ -> false
+                    end
+                end, Reqs)
+        end
     end).
+
+build_process_item(Pid, Info) ->
+    {_Keys, Values} = lists:unzip(Info),
+    T = list_to_tuple(Values),
+    {process_item, Pid,
+        {process_info,
+            element(1, T),
+            element(2, T),
+            case element(3, T) of
+                [] -> none;
+                Name -> {some, Name}
+            end,
+            element(4, T),
+            element(5, T),
+            element(6, T),
+            spectator_tag_manager:get_tag(Pid),
+            element(7, T)}}.
 
 % Kill a process
 % https://www.erlang.org/doc/apps/erts/erlang.html#exit/2
@@ -173,6 +218,20 @@ sys_suspend(NodeOption, Pid) ->
 
 sys_resume(NodeOption, Pid) ->
     to_result(fun() -> do_call(NodeOption, sys, resume, [Pid]) end).
+
+% Check if a process was started via proc_lib (and thus handles system messages).
+% Reads $initial_call from the process dictionary — no messages are sent.
+% This is the same check that observer uses before sending sys:get_status.
+is_otp_compatible(NodeOption, Pid) ->
+    try
+        case do_call(NodeOption, proc_lib, translate_initial_call, [Pid]) of
+            {proc_lib, init_p, 5} -> false;
+            {_, _, _} -> true;
+            _ -> false
+        end
+    catch
+        _:_ -> false
+    end.
 
 % Throw an error if a value is undefined
 % !! THROWS - wrap in to_result
@@ -333,10 +392,57 @@ get_details(NodeOption, Name) ->
 extract_val(Tuple) ->
     assert_val(element(2, Tuple)).
 
+% Batched port collection.
+% Uses erlang:port_info(Port) (returns all fields in one call) instead of
+% 8 separate port_info(Port, Key) calls per port.
+% For remote nodes, all requests fly concurrently via erpc:send_request.
 list_ports(NodeOption) ->
     to_result(fun() ->
-        do_call(NodeOption, erlang, ports, [])
+        case NodeOption of
+            none ->
+                lists:filtermap(fun(Port) ->
+                    try
+                        Props = erlang:port_info(Port),
+                        case Props of
+                            undefined -> false;
+                            _ -> {true, build_port_item_from_props(Port, Props)}
+                        end
+                    catch _:_ -> false
+                    end
+                end, erlang:ports());
+            {some, NodeName} ->
+                Ports = erpc:call(NodeName, erlang, ports, [], ?BULK_TIMEOUT),
+                Reqs = [{P, erpc:send_request(NodeName, erlang, port_info, [P])}
+                        || P <- Ports],
+                lists:filtermap(fun({Port, Req}) ->
+                    try
+                        case erpc:receive_response(Req, ?BULK_TIMEOUT) of
+                            undefined -> false;
+                            Props -> {true, build_port_item_from_props(Port, Props)}
+                        end
+                    catch _:_ -> false
+                    end
+                end, Reqs)
+        end
     end).
+
+build_port_item_from_props(Port, Props) ->
+    {port_item, Port,
+        {port_info,
+            list_to_bitstring(proplists:get_value(name, Props, "")),
+            case proplists:get_value(registered_name, Props, undefined) of
+                undefined -> none;
+                RegName -> {some, RegName}
+            end,
+            classify_system_primitive(proplists:get_value(connected, Props)),
+            case proplists:get_value(os_pid, Props, undefined) of
+                undefined -> none;
+                OsPid -> {some, OsPid}
+            end,
+            proplists:get_value(input, Props, 0),
+            proplists:get_value(output, Props, 0),
+            proplists:get_value(memory, Props, 0),
+            proplists:get_value(queue_size, Props, 0)}}.
 
 % Get the info of a port for display in a list
 % https://www.erlang.org/doc/apps/erts/erlang.html#port_info/2
@@ -431,15 +537,48 @@ build_table_info(NodeOption, Table) ->
         assert_val(do_call(NodeOption, ets, info, [Table, read_concurrency])),
         assert_val(do_call(NodeOption, ets, info, [Table, write_concurrency]))}.
 
-% Return a list of all ETS tables on the node,
-% already populated with information, as Table() types.
+% Batched ETS table collection.
+% Uses ets:info(Table) (returns all fields in one call) instead of
+% 9 separate ets:info(Table, Key) calls per table.
+% For remote nodes, all requests fly concurrently via erpc:send_request.
 list_ets_tables(NodeOption) ->
     to_result(fun() ->
-        lists:map(
-            fun(Table) -> build_table_info(NodeOption, Table) end,
-            do_call(NodeOption, ets, all, [])
-        )
+        case NodeOption of
+            none ->
+                lists:filtermap(fun(Table) ->
+                    case ets:info(Table) of
+                        undefined -> false;
+                        Props -> {true, build_table_from_props(Props)}
+                    end
+                end, ets:all());
+            {some, NodeName} ->
+                Tables = erpc:call(NodeName, ets, all, [], ?BULK_TIMEOUT),
+                Reqs = [{T, erpc:send_request(NodeName, ets, info, [T])}
+                        || T <- Tables],
+                lists:filtermap(fun({_T, Req}) ->
+                    try
+                        case erpc:receive_response(Req, ?BULK_TIMEOUT) of
+                            undefined -> false;
+                            Props -> {true, build_table_from_props(Props)}
+                        end
+                    catch _:_ -> false
+                    end
+                end, Reqs)
+        end
     end).
+
+build_table_from_props(Props) ->
+    Owner = proplists:get_value(owner, Props),
+    {table,
+        proplists:get_value(id, Props),
+        proplists:get_value(name, Props),
+        proplists:get_value(type, Props),
+        proplists:get_value(size, Props),
+        proplists:get_value(memory, Props),
+        classify_system_primitive(Owner),
+        proplists:get_value(protection, Props),
+        proplists:get_value(read_concurrency, Props),
+        proplists:get_value(write_concurrency, Props)}.
 
 % Return the info of a single ETS table as a Table() type
 get_ets_table_info(NodeOption, Table) ->
@@ -553,9 +692,6 @@ hidden_connect_node(Node) ->
 
 pid_to_string(Pid) ->
     list_to_bitstring(pid_to_list(Pid)).
-
-set_cookie(Node, Cookie) ->
-    to_result(fun() -> erlang:set_cookie(Node, Cookie) end).
 
 truncate_float(F) ->
     list_to_bitstring(io_lib:format("~.2f", [F])).

@@ -1,6 +1,7 @@
 [tools]
 erlang = "28"
-gleam = "1.12.0"
+gleam = "1.14.0"
+rebar = "3.25.1"
 
 [tasks."build:assets"]
 dir = "spectator"

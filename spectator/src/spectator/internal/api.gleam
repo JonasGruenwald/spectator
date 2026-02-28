@@ -527,14 +527,7 @@ pub fn sort_port_list(
 
 pub fn get_process_list(n: ErlangNode) -> List(ProcessItem) {
   case list_processes(n) {
-    Ok(pids) -> {
-      list.filter_map(pids, fn(pid) {
-        case get_process_info(n, pid) {
-          Error(e) -> Error(e)
-          Ok(info) -> Ok(ProcessItem(pid, info))
-        }
-      })
-    }
+    Ok(items) -> items
     Error(e) -> {
       log(
         logging.Alert,
@@ -546,9 +539,7 @@ pub fn get_process_list(n: ErlangNode) -> List(ProcessItem) {
 }
 
 @external(erlang, "spectator_ffi", "list_processes")
-pub fn list_processes(
-  node: ErlangNode,
-) -> Result(List(process.Pid), ErlangError)
+fn list_processes(node: ErlangNode) -> Result(List(ProcessItem), ErlangError)
 
 @external(erlang, "spectator_ffi", "get_process_info")
 pub fn get_process_info(
@@ -566,23 +557,28 @@ pub fn get_details(
 
 // -------[OTP PROCESS DETAILS]
 
+@external(erlang, "spectator_ffi", "is_otp_compatible")
+pub fn is_otp_compatible(node: ErlangNode, pid: process.Pid) -> Bool
+
 pub fn request_otp_data(
   node: ErlangNode,
   proc: process.Pid,
   callback: fn(OtpDetails) -> Nil,
 ) {
   process.spawn_unlinked(fn() {
-    case get_status(node, proc, 100) {
-      Error(_) -> {
-        Nil
-      }
-      Ok(status) -> {
-        let state =
-          get_state(node, proc, 100)
-          |> result.unwrap(from(option.None))
+    case is_otp_compatible(node, proc) {
+      False -> Nil
+      True ->
+        case get_status(node, proc, 100) {
+          Error(_) -> Nil
+          Ok(status) -> {
+            let state =
+              get_state(node, proc, 100)
+              |> result.unwrap(from(option.None))
 
-        callback(OtpDetails(pid: proc, status:, state:))
-      }
+            callback(OtpDetails(pid: proc, status:, state:))
+          }
+        }
     }
   })
 }
@@ -655,18 +651,17 @@ pub fn opaque_tuple_to_list(tuple: OpaqueTuple) -> List(dynamic.Dynamic)
 // -------[PORTS]
 
 pub fn get_port_list(node: ErlangNode) -> List(PortItem) {
-  list_ports(node)
-  |> result.unwrap([])
-  |> list.filter_map(fn(pid) {
-    case get_port_info(node, pid) {
-      Error(e) -> Error(e)
-      Ok(info) -> Ok(PortItem(pid, info))
+  case list_ports(node) {
+    Ok(items) -> items
+    Error(e) -> {
+      log(logging.Alert, "Failed to list ports, error: " <> string.inspect(e))
+      []
     }
-  })
+  }
 }
 
 @external(erlang, "spectator_ffi", "list_ports")
-pub fn list_ports(node: ErlangNode) -> Result(List(port.Port), ErlangError)
+fn list_ports(node: ErlangNode) -> Result(List(PortItem), ErlangError)
 
 @external(erlang, "spectator_ffi", "get_port_info")
 pub fn get_port_info(
@@ -789,12 +784,6 @@ pub fn hidden_connect_node(node: atom.Atom) -> Result(Bool, ErlangError)
 
 @external(erlang, "net_kernel", "connect_node")
 pub fn connect_node(node: atom.Atom) -> Bool
-
-@external(erlang, "spectator_ffi", "set_cookie")
-pub fn set_cookie(
-  node: atom.Atom,
-  cookie: atom.Atom,
-) -> Result(Bool, ErlangError)
 
 pub fn node_from_params(params: common.Params) {
   case common.get_param(params, "node") {

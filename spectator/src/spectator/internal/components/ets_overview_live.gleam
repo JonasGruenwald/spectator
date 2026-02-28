@@ -40,22 +40,21 @@ fn init(params) {
   let defaul_sort_direction = api.Descending
   let refresh_interval = common.get_refresh_interval(params)
   let word_size = result.unwrap(api.get_word_size(node), 8)
+  // Return immediately with empty tables - data loaded async via Refresh
+  // to avoid blocking init with slow erpc calls that exceed mist's 500ms
+  // actor init timeout.
   #(
     Model(
       node:,
       params: common.sanitize_params(params),
       subject: None,
       refresh_interval:,
-      tables: get_sorted_tables(
-        node,
-        defaul_sort_criteria,
-        defaul_sort_direction,
-      ),
+      tables: [],
       word_size:,
       sort_criteria: defaul_sort_criteria,
       sort_direction: defaul_sort_direction,
     ),
-    common.emit_after(refresh_interval, Refresh, None, CreatedSubject),
+    effect.from(fn(dispatch) { dispatch(Refresh) }),
   )
 }
 
