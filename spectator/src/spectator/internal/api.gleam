@@ -564,23 +564,28 @@ pub fn get_details(
 
 // -------[OTP PROCESS DETAILS]
 
+@external(erlang, "spectator_ffi", "is_otp_compatible")
+pub fn is_otp_compatible(node: ErlangNode, pid: process.Pid) -> Bool
+
 pub fn request_otp_data(
   node: ErlangNode,
   proc: process.Pid,
   callback: fn(OtpDetails) -> Nil,
 ) {
   process.spawn_unlinked(fn() {
-    case get_status(node, proc, 100) {
-      Error(_) -> {
-        Nil
-      }
-      Ok(status) -> {
-        let state =
-          get_state(node, proc, 100)
-          |> result.unwrap(from(option.None))
+    case is_otp_compatible(node, proc) {
+      False -> Nil
+      True ->
+        case get_status(node, proc, 100) {
+          Error(_) -> Nil
+          Ok(status) -> {
+            let state =
+              get_state(node, proc, 100)
+              |> result.unwrap(from(option.None))
 
-        callback(OtpDetails(pid: proc, status:, state:))
-      }
+            callback(OtpDetails(pid: proc, status:, state:))
+          }
+        }
     }
   })
 }

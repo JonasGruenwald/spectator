@@ -31,7 +31,8 @@
     truncate_float/1,
     kill_process/2,
     set_cookie/2,
-    hidden_connect_node/1
+    hidden_connect_node/1,
+    is_otp_compatible/2
 ]).
 
 % ---------------------------------------------------
@@ -227,6 +228,20 @@ sys_suspend(NodeOption, Pid) ->
 
 sys_resume(NodeOption, Pid) ->
     to_result(fun() -> do_call(NodeOption, sys, resume, [Pid]) end).
+
+% Check if a process was started via proc_lib (and thus handles system messages).
+% Reads $initial_call from the process dictionary — no messages are sent.
+% This is the same check that observer uses before sending sys:get_status.
+is_otp_compatible(NodeOption, Pid) ->
+    try
+        case do_call(NodeOption, proc_lib, translate_initial_call, [Pid]) of
+            {proc_lib, init_p, 5} -> false;
+            {_, _, _} -> true;
+            _ -> false
+        end
+    catch
+        _:_ -> false
+    end.
 
 % Throw an error if a value is undefined
 % !! THROWS - wrap in to_result
