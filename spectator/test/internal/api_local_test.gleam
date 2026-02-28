@@ -71,9 +71,8 @@ pub fn list_processes_test() {
   let assert Ok(pid) = process.subject_owner(sub)
 
   // Check that the process is in the list of processes
-  api.list_processes(None)
-  |> should.be_ok
-  |> list.find(fn(p) { p == pid })
+  api.get_process_list(None)
+  |> list.find(fn(p) { p.pid == pid })
   |> should.be_ok
 }
 
@@ -361,7 +360,7 @@ pub fn get_port_list_test() {
 
   let ports = api.get_port_list(None)
 
-  { list.length(ports) > 0 }
+  { ports != [] }
   |> should.be_true()
 
   let mock_port_item =

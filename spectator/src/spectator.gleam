@@ -169,7 +169,6 @@ pub fn tag_result(
 
 type NodeConnectionError {
   NotDistributedError
-  FailedToSetCookieError
   FailedToConnectError
 }
 
@@ -192,19 +191,6 @@ fn validate_node_connection(
       )
 
       let node_atom = atom.create(node)
-      let cookie_validation_passed = case common.get_param(params, "cookie") {
-        // No cookie, validation passes
-        Error(_) -> True
-        Ok(cookie) -> {
-          let cookie_atom = atom.create(cookie)
-          result.unwrap(api.set_cookie(node_atom, cookie_atom), False)
-        }
-      }
-
-      use <- bool.guard(
-        !cookie_validation_passed,
-        Error(FailedToSetCookieError),
-      )
 
       use <- bool.guard(
         !result.unwrap(api.hidden_connect_node(node_atom), False),
@@ -291,10 +277,8 @@ fn render_server_component(
               html.text(case connection_error {
                 NotDistributedError ->
                   "Node is not distributed, cannot connect to other nodes. Please start the spectator instance in distributed mode by setting a node name."
-                FailedToSetCookieError ->
-                  "Failed to set cookie, could not apply the cookie to the node"
                 FailedToConnectError ->
-                  "Failed to connect to node, please check the node name and cookie"
+                  "Failed to connect to node, please check the node name and ensure the target node has the same Erlang cookie set as spectator"
               }),
             ]),
             html.div([], [

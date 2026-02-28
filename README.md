@@ -44,7 +44,7 @@ The repo contains [a full example of how to use spectator to inspect an app depl
 First, ensure your application has an Erlang name and cookie set, for example by setting the `ERL_FLAGS` environment variable before your application is started:
 
 ```sh
-ERL_FLAGS="-sname myapp -setcookie mycookie"
+ERL_FLAGS="-name myapp@host -setcookie mycookie"
 ```
 
 If your application is running in a docker container, put both your applications container, and the container running spectator on the same docker network, and ensure that your applications container has its hostname set to a value you know.
@@ -55,7 +55,7 @@ Enter the details of the node you wish to inspect, the name should be the name y
 
 Finally, click 'Connect', to inspect the your application node.
 
-Please note that all connection information, including the cookie, is stored plainly in the URL query parameters of the spectator application.
+Note that the inspection target must have the same Erlang cookie set as spectator. Just like with your application, you can configure spectator's cookie via the `ERL_FLAGS` environment variable, e.g. `ERL_FLAGS="-name spectator@127.0.0.1 -setcookie mycookie"`.
 
 ## Considerations
 
@@ -68,7 +68,7 @@ Please be aware of the following implications of running spectator:
   In order to get a selected processes OTP state, spectator needs to send it system messages. If you select a process that is not handling these messages properly, spectator may fill up its message queue, as it is sending a new message every tick in the configured interval. If the processes message queue is over a certain size, spectator will stop sending new messages, however the process may never handle the already queued up messages
 
 - **Spectator will create atoms dynamically**  
-  When you choose to connect to other Erlang nodes, spectator needs to convert the node name and cookie you provide into atoms. Therefore it is possible to exhaust the memory of the BEAM instance running spectator using its user interface, as atoms are never garbage collected.
+  When you choose to connect to other Erlang nodes, spectator needs to convert the node name you provide into an atom. Therefore it is possible to exhaust the memory of the BEAM instance running spectator using its user interface, as atoms are never garbage collected.
 - **Spectator does not include Access Control**  
   Spectator exposes sensitive details about the runtime it is inspecting via its web interface and does not currently gate access to it.  
   If you use spectator in a production environment, you are responsible for securing it – make sure to never expose spectator to the public internet.

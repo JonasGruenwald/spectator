@@ -526,7 +526,7 @@ pub fn sort_port_list(
 // -------[PROCESS LIST]
 
 pub fn get_process_list(n: ErlangNode) -> List(ProcessItem) {
-  case list_processes_with_info(n) {
+  case list_processes(n) {
     Ok(items) -> items
     Error(e) -> {
       log(
@@ -539,14 +539,7 @@ pub fn get_process_list(n: ErlangNode) -> List(ProcessItem) {
 }
 
 @external(erlang, "spectator_ffi", "list_processes")
-pub fn list_processes(
-  node: ErlangNode,
-) -> Result(List(process.Pid), ErlangError)
-
-@external(erlang, "spectator_ffi", "list_processes_with_info")
-fn list_processes_with_info(
-  node: ErlangNode,
-) -> Result(List(ProcessItem), ErlangError)
+fn list_processes(node: ErlangNode) -> Result(List(ProcessItem), ErlangError)
 
 @external(erlang, "spectator_ffi", "get_process_info")
 pub fn get_process_info(
@@ -637,7 +630,7 @@ fn process_raw_ets_data(
   }
 }
 
-@external(erlang, "spectator_ffi", "list_ets_tables_bulk")
+@external(erlang, "spectator_ffi", "list_ets_tables")
 pub fn list_ets_tables(node: ErlangNode) -> Result(List(Table), ErlangError)
 
 @external(erlang, "spectator_ffi", "get_ets_table_info")
@@ -658,7 +651,7 @@ pub fn opaque_tuple_to_list(tuple: OpaqueTuple) -> List(dynamic.Dynamic)
 // -------[PORTS]
 
 pub fn get_port_list(node: ErlangNode) -> List(PortItem) {
-  case list_ports_with_info(node) {
+  case list_ports(node) {
     Ok(items) -> items
     Error(e) -> {
       log(logging.Alert, "Failed to list ports, error: " <> string.inspect(e))
@@ -668,10 +661,7 @@ pub fn get_port_list(node: ErlangNode) -> List(PortItem) {
 }
 
 @external(erlang, "spectator_ffi", "list_ports")
-pub fn list_ports(node: ErlangNode) -> Result(List(port.Port), ErlangError)
-
-@external(erlang, "spectator_ffi", "list_ports_with_info")
-fn list_ports_with_info(node: ErlangNode) -> Result(List(PortItem), ErlangError)
+fn list_ports(node: ErlangNode) -> Result(List(PortItem), ErlangError)
 
 @external(erlang, "spectator_ffi", "get_port_info")
 pub fn get_port_info(
@@ -794,12 +784,6 @@ pub fn hidden_connect_node(node: atom.Atom) -> Result(Bool, ErlangError)
 
 @external(erlang, "net_kernel", "connect_node")
 pub fn connect_node(node: atom.Atom) -> Bool
-
-@external(erlang, "spectator_ffi", "set_cookie")
-pub fn set_cookie(
-  node: atom.Atom,
-  cookie: atom.Atom,
-) -> Result(Bool, ErlangError)
 
 pub fn node_from_params(params: common.Params) {
   case common.get_param(params, "node") {

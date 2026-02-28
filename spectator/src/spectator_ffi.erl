@@ -5,13 +5,11 @@
     sys_suspend/2,
     sys_resume/2,
     list_processes/1,
-    list_processes_with_info/1,
     get_process_info/2,
     format_pid/1,
     get_details/2,
     format_port/1,
     list_ets_tables/1,
-    list_ets_tables_bulk/1,
     get_ets_data/2,
     new_ets_table/2,
     get_word_size/1,
@@ -19,7 +17,6 @@
     get_ets_table_info/2,
     compare_data/2,
     list_ports/1,
-    list_ports_with_info/1,
     get_port_info/2,
     get_port_details/2,
     pid_to_string/1,
@@ -30,7 +27,6 @@
     get_system_info/1,
     truncate_float/1,
     kill_process/2,
-    set_cookie/2,
     hidden_connect_node/1,
     is_otp_compatible/2
 ]).
@@ -129,16 +125,10 @@ to_option(Input) ->
 % PROCESSES
 % ---------------------------------------------------
 
-% List all processes on a node
-list_processes(NodeOption) ->
-    to_result(fun() ->
-        do_call(NodeOption, erlang, processes, [])
-    end).
-
 % List all processes with info in a single batch.
 % For remote nodes, uses concurrent erpc:send_request to collect all
 % process info in parallel, reducing N sequential round-trips to 1 batch.
-list_processes_with_info(NodeOption) ->
+list_processes(NodeOption) ->
     Items = [current_function, initial_call, registered_name,
              memory, message_queue_len, reductions, status],
     to_result(fun() ->
@@ -402,16 +392,11 @@ get_details(NodeOption, Name) ->
 extract_val(Tuple) ->
     assert_val(element(2, Tuple)).
 
-list_ports(NodeOption) ->
-    to_result(fun() ->
-        do_call(NodeOption, erlang, ports, [])
-    end).
-
 % Batched port collection.
 % Uses erlang:port_info(Port) (returns all fields in one call) instead of
 % 8 separate port_info(Port, Key) calls per port.
 % For remote nodes, all requests fly concurrently via erpc:send_request.
-list_ports_with_info(NodeOption) ->
+list_ports(NodeOption) ->
     to_result(fun() ->
         case NodeOption of
             none ->
@@ -552,21 +537,11 @@ build_table_info(NodeOption, Table) ->
         assert_val(do_call(NodeOption, ets, info, [Table, read_concurrency])),
         assert_val(do_call(NodeOption, ets, info, [Table, write_concurrency]))}.
 
-% Return a list of all ETS tables on the node,
-% already populated with information, as Table() types.
-list_ets_tables(NodeOption) ->
-    to_result(fun() ->
-        lists:map(
-            fun(Table) -> build_table_info(NodeOption, Table) end,
-            do_call(NodeOption, ets, all, [])
-        )
-    end).
-
 % Batched ETS table collection.
 % Uses ets:info(Table) (returns all fields in one call) instead of
 % 9 separate ets:info(Table, Key) calls per table.
 % For remote nodes, all requests fly concurrently via erpc:send_request.
-list_ets_tables_bulk(NodeOption) ->
+list_ets_tables(NodeOption) ->
     to_result(fun() ->
         case NodeOption of
             none ->
@@ -717,9 +692,6 @@ hidden_connect_node(Node) ->
 
 pid_to_string(Pid) ->
     list_to_bitstring(pid_to_list(Pid)).
-
-set_cookie(Node, Cookie) ->
-    to_result(fun() -> erlang:set_cookie(Node, Cookie) end).
 
 truncate_float(F) ->
     list_to_bitstring(io_lib:format("~.2f", [F])).
