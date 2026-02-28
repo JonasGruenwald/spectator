@@ -1,3 +1,14 @@
+## [2.1.0] 2026-28-02
+
+This update brings changes that make spectator work better in a real world production environment
+
+- Adjusted timeouts and data collection handling that performs better with nodes distributed across different servers
+- Removed option to set cookie via the WebUI
+- Implemented check for OTP processes to avoid sending unnecessary system messages to processes that will never handle them
+- Bumped dependencies and Gleam version 
+
+Thanks for the contribution and insights from production use [@oderwat](https://github.com/)
+
 ## [2.0.1] 2025-10-22
 
 - Embed assets into package instead of relying on priv directory, as it's not available to the escript
