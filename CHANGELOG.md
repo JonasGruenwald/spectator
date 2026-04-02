@@ -1,3 +1,7 @@
+## [2.1.1] 2026-02-04
+
+- Update mist to v6, thanks [@folospior](https://github.com/folospior)
+
 ## [2.1.0] 2026-28-02
 
 This update brings changes that make spectator work better in a real world production environment
@@ -7,7 +11,7 @@ This update brings changes that make spectator work better in a real world produ
 - Implemented check for OTP processes to avoid sending unnecessary system messages to processes that will never handle them
 - Bumped dependencies and Gleam version 
 
-Thanks for the contribution and insights from production use [@oderwat](https://github.com/)
+Thanks for the contribution and insights from production use, thanks [@oderwat](https://github.com/)
 
 ## [2.0.1] 2025-10-22
 
