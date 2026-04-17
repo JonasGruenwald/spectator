@@ -4,14 +4,14 @@ import gleam/otp/actor
 import gleam/otp/static_supervisor as supervisor
 import spectator
 
-pub fn start(_application, _start_type: application.StartType) {
+pub fn start(_application: a, _start_type: application.StartType) -> Result(process.Pid, actor.StartError) {
   spectator.start_on("0.0.0.0", 3000)
   |> to_application_start_result
 }
 
 fn to_application_start_result(
   result: Result(actor.Started(supervisor.Supervisor), actor.StartError),
-) {
+) -> Result(process.Pid, actor.StartError) {
   case result {
     Ok(actor.Started(pid:, ..)) -> {
       Ok(pid)
