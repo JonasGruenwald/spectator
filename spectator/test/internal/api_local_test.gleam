@@ -1,6 +1,5 @@
 //// Test cases that run api requests against the local node
 
-import carpenter/table
 import gleam/dynamic
 import gleam/erlang/atom
 import gleam/erlang/port
@@ -195,7 +194,7 @@ pub fn get_state_test() {
 
   let actual_state =
     pantry.list_items(sub)
-    |> from()
+    |> cast_to_dynamic()
 
   let inspected_state =
     api.get_state(None, pid, 500)
@@ -216,17 +215,16 @@ pub fn get_state_failure_test() {
 pub fn list_ets_tables_test() {
   // Create a test table
   let assert Ok(example) =
-    table.build("test_table")
-    |> table.privacy(table.Protected)
-    |> table.write_concurrency(table.NoWriteConcurrency)
-    |> table.read_concurrency(True)
-    |> table.decentralized_counters(True)
-    |> table.compression(False)
-    |> table.set
+    new_ets_table(atom.create("test_table"), [
+      NamedTable,
+      Set,
+      Protected,
+      WriteConcurrency(False),
+      ReadConcurrency(True),
+    ])
 
   // Insert values
-  example
-  |> table.insert([#("hello", "joe")])
+  insert_test_rows(example, [#("hello", "joe")])
 
   let tables =
     api.list_ets_tables(None)
@@ -270,17 +268,16 @@ pub fn list_ets_tables_test() {
 pub fn get_ets_table_info_test() {
   // Create a test table
   let assert Ok(example) =
-    table.build("test_table_ordered_set")
-    |> table.privacy(table.Public)
-    |> table.write_concurrency(table.WriteConcurrency)
-    |> table.read_concurrency(True)
-    |> table.decentralized_counters(True)
-    |> table.compression(False)
-    |> table.ordered_set
+    new_ets_table(atom.create("test_table_ordered_set"), [
+      NamedTable,
+      OrderedSet,
+      Public,
+      WriteConcurrency(True),
+      ReadConcurrency(True),
+    ])
 
   // Insert values
-  example
-  |> table.insert([#("hello", "joe")])
+  insert_test_rows(example, [#("hello", "joe")])
 
   let info =
     api.get_ets_table_info(None, atom.create("test_table_ordered_set"))
@@ -320,17 +317,16 @@ pub fn get_ets_table_info_test() {
 pub fn get_ets_data_test() {
   // Create a test table
   let assert Ok(example) =
-    table.build("test_table_data")
-    |> table.privacy(table.Public)
-    |> table.write_concurrency(table.WriteConcurrency)
-    |> table.read_concurrency(True)
-    |> table.decentralized_counters(True)
-    |> table.compression(False)
-    |> table.set
+    new_ets_table(atom.create("test_table_data"), [
+      NamedTable,
+      Set,
+      Public,
+      WriteConcurrency(True),
+      ReadConcurrency(True),
+    ])
 
   // Insert values
-  example
-  |> table.insert([#("hello", "joe"), #("hello_2", "mike")])
+  insert_test_rows(example, [#("hello", "joe"), #("hello_2", "mike")])
 
   let table =
     api.get_ets_table_info(None, atom.create("test_table_data"))
@@ -495,6 +491,30 @@ pub fn tag_info_test() {
   |> should.equal("test tag")
 }
 
+type EtsTableOption {
+  NamedTable
+  Set
+  OrderedSet
+  Protected
+  Public
+  ReadConcurrency(Bool)
+  WriteConcurrency(Bool)
+}
+
+fn insert_test_rows(table: atom.Atom, rows: List(#(String, String))) -> Nil {
+  let _ = ets_insert(table, rows)
+  Nil
+}
+
+@external(erlang, "spectator_test_ffi", "new_ets_table")
+fn new_ets_table(
+  name: atom.Atom,
+  props: List(EtsTableOption),
+) -> Result(atom.Atom, Nil)
+
+@external(erlang, "ets", "insert")
+fn ets_insert(table: atom.Atom, rows: List(#(String, String))) -> Bool
+
 @external(erlang, "erlang", "open_port")
 fn open_port(
   command: #(atom.Atom, String),
@@ -505,4 +525,4 @@ fn open_port(
 fn link_port(p: port.Port) -> Nil
 
 @external(erlang, "gleam@function", "identity")
-fn from(a: anything) -> dynamic.Dynamic
+fn cast_to_dynamic(a: anything) -> dynamic.Dynamic

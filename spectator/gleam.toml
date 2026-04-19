@@ -24,5 +24,4 @@ lustre = ">= 5.0.0 and < 6.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
-carpenter = { git = "https://github.com/ghivert/carpenter.git", ref = "main" }
 embeds = ">= 1.1.2 and < 2.0.0"
