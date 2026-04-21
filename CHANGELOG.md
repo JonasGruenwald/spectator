@@ -1,8 +1,12 @@
-## [2.1.1] 2026-02-04
+## [2.1.2] 2026-04-21
+
+- Update to stdlib v1
+
+## [2.1.1] 2026-04-02
 
 - Update mist to v6, thanks [@folospior](https://github.com/folospior)
 
-## [2.1.0] 2026-28-02
+## [2.1.0] 2026-02-28
 
 This update brings changes that make spectator work better in a real world production environment
 
